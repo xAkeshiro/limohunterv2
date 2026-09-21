@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { requireAdmin } from '@/lib/admin';
 import AdminNav from '@/components/admin/AdminNav';
+import DemoBanner from '@/components/admin/DemoBanner';
 
 export const metadata: Metadata = {
   title: { default: 'Admin', template: '%s | Admin' },
@@ -22,6 +23,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
         <Link href="/" className="btn-ghost">View public site</Link>
       </div>
+
+      <DemoBanner />
 
       <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
         <AdminNav />

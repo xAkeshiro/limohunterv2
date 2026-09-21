@@ -1,26 +1,14 @@
 'use server';
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import crypto from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getDb } from './db';
 import { requireAdmin } from './admin';
 import { slugify } from './format';
+import { storeImages, parseImageUrls } from './storage';
 import type { FormState } from './actions';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
-const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/svg+xml']);
-const EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/avif': 'avif',
-  'image/svg+xml': 'svg',
-};
-const MAX_BYTES = 8 * 1024 * 1024;
 
 function fieldErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
@@ -29,31 +17,6 @@ function fieldErrors(error: z.ZodError): Record<string, string> {
     if (!out[key]) out[key] = issue.message;
   }
   return out;
-}
-
-/**
- * Persists uploaded photos and returns their public paths. Names are random so
- * a caller cannot overwrite an existing file by re-using a filename.
- */
-async function storeUploads(files: File[]): Promise<{ paths: string[]; skipped: number }> {
-  const paths: string[] = [];
-  let skipped = 0;
-
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-
-  for (const file of files) {
-    if (!file || file.size === 0) continue;
-    if (!ALLOWED.has(file.type) || file.size > MAX_BYTES) {
-      skipped += 1;
-      continue;
-    }
-    const name = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${EXT[file.type]}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(path.join(UPLOAD_DIR, name), buffer);
-    paths.push(`/uploads/${name}`);
-  }
-
-  return { paths, skipped };
 }
 
 const editSchema = z.object({
@@ -109,8 +72,9 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
   // Existing photos the editor kept, plus anything newly uploaded.
   const kept = data.getAll('keep_image').map(String).filter(Boolean);
   const uploads = data.getAll('photos').filter((v): v is File => v instanceof File);
-  const { paths: added, skipped } = await storeUploads(uploads);
-  const images = [...kept, ...added];
+  const { paths: added, skipped, errors } = await storeImages(uploads);
+  const linked = parseImageUrls(String(data.get('image_urls') ?? ''));
+  const images = [...kept, ...added, ...linked];
 
   const v = parsed.data;
   db.prepare(
@@ -138,7 +102,7 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
   revalidatePath('/inventory');
   revalidatePath('/');
 
-  const note = skipped > 0 ? ` ${skipped} file(s) were rejected (type or size).` : '';
+  const note = skipped > 0 ? ` ${skipped} photo(s) rejected — ${errors.join('; ')}.` : '';
   return { ok: true, message: `Listing saved.${note}` };
 }
 
@@ -230,8 +194,10 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
   }
 
   const uploads = data.getAll('photos').filter((f): f is File => f instanceof File);
-  const { paths } = await storeUploads(uploads);
-  const images = paths.length > 0 ? paths : ['/img/placeholder.svg'];
+  const { paths } = await storeImages(uploads);
+  const linked = parseImageUrls(String(data.get('image_urls') ?? ''));
+  const images = [...paths, ...linked];
+  if (images.length === 0) images.push('/img/placeholder.svg');
 
   db.prepare(
     `INSERT INTO listings (

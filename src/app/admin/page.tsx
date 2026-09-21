@@ -39,6 +39,16 @@ export default function AdminDashboard() {
         <p className="mt-1.5 text-3xl font-bold text-brand-300">{money(s.value)}</p>
       </div>
 
+      <section className="mt-6">
+        <a href="/admin/database" className="btn-ghost" download>
+          Download database
+        </a>
+        <p className="mt-2 text-xs text-slate-500">
+          Commit the downloaded file to <code className="font-mono">data/fleet-marketplace.db</code>{' '}
+          to make the current listings permanent.
+        </p>
+      </section>
+
       <section className="mt-10">
         <div className="flex items-center justify-between">
           <h3 className="text-lg">Recently added</h3>

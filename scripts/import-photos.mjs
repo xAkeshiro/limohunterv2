@@ -8,6 +8,8 @@
  *      the listing with that slug.
  *
  *   2. Manifest — npm run import-photos -- --manifest ./photos.json
+ *      Add --link to store the URLs directly instead of downloading them,
+ *      which is what you want when the images stay hosted elsewhere.
  *      photos.json maps slugs to image URLs or local paths:
  *        { "2019-cadillac-xts-stretch-limousine-1": ["https://…/a.jpg", "./b.jpg"] }
  *      Remote URLs are downloaded; local paths are copied.
@@ -33,6 +35,7 @@ const has = (name) => args.includes(`--${name}`);
 const DIR = flag('dir');
 const MANIFEST = flag('manifest');
 const REPLACE = has('replace');
+const LINK_ONLY = has('link');
 
 if (!DIR && !MANIFEST) {
   console.error('Usage: npm run import-photos -- --dir ./photos [--replace]');
@@ -69,6 +72,8 @@ async function fetchImage(url) {
 
 /** Resolve one source (URL or local path) to a public /uploads path. */
 async function resolve(source) {
+  // --link records the URL as-is, for hosts that serve the images directly.
+  if (LINK_ONLY && /^https?:\/\//i.test(source)) return source;
   if (/^https?:\/\//i.test(source)) return fetchImage(source);
 
   const abs = path.resolve(ROOT, source);

@@ -163,6 +163,17 @@ export default function AdminListingForm({ listing }: { listing?: ListingView })
         )}
 
         <div className="mt-4">
+          <label className="label" htmlFor="image_urls">Add photos by URL — one per line</label>
+          <textarea
+            id="image_urls" name="image_urls" rows={3} className="field"
+            placeholder={'https://example.com/photo-1.jpg\nhttps://example.com/photo-2.jpg'}
+          />
+          <p className="mt-1.5 text-xs text-slate-500">
+            Rendered straight from the source, so nothing is stored on our side.
+          </p>
+        </div>
+
+        <div className="mt-4">
           <label className="label" htmlFor="photos">Upload photos</label>
           <input
             id="photos" name="photos" type="file" multiple
@@ -170,7 +181,7 @@ export default function AdminListingForm({ listing }: { listing?: ListingView })
             className="field file:mr-3 file:rounded file:border-0 file:bg-brand-300 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink"
           />
           <p className="mt-1.5 text-xs text-slate-500">
-            JPG, PNG, WebP or AVIF, up to 8&nbsp;MB each. New uploads are added to the photos kept above.
+            JPG, PNG, WebP or AVIF, up to 8&nbsp;MB each. Added to the photos kept above.
           </p>
         </div>
       </fieldset>

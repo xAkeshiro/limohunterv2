@@ -1,15 +1,43 @@
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
-const DB_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = process.env.DATABASE_PATH ?? path.join(DB_DIR, 'fleet-marketplace.db');
+const PROJECT_DB = path.join(process.cwd(), 'data', 'fleet-marketplace.db');
+const SOURCE_PATH = process.env.DATABASE_PATH ?? PROJECT_DB;
 
 let instance: Database.Database | null = null;
+let activePath = SOURCE_PATH;
 
-/** Table definitions. Kept idempotent so boot and seed share one code path. */
+/**
+ * Serverless platforms (Vercel among them) mount the deployment read-only and
+ * expose only the temp directory for writes. Set EPHEMERAL_DB=0 to force
+ * normal on-disk behaviour, or =1 to opt in outside Vercel.
+ */
+function ephemeral(): boolean {
+  const flag = process.env.EPHEMERAL_DB?.trim();
+  if (flag === '1' || flag === 'true') return true;
+  if (flag === '0' || flag === 'false') return false;
+  return Boolean(process.env.VERCEL);
+}
+
+/**
+ * Resolves the file the connection actually opens. In ephemeral mode the
+ * committed database is copied into the temp directory once per cold start so
+ * the admin remains writable; those writes last only as long as the instance.
+ */
+function resolvePath(): string {
+  if (!ephemeral()) return SOURCE_PATH;
+
+  const target = path.join(os.tmpdir(), 'fleet-marketplace.db');
+  if (!fs.existsSync(target)) {
+    if (fs.existsSync(SOURCE_PATH)) fs.copyFileSync(SOURCE_PATH, target);
+    else fs.writeFileSync(target, '');
+  }
+  return target;
+}
+
 const SCHEMA = `
-PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -84,11 +112,27 @@ CREATE TABLE IF NOT EXISTS favorites (
 export function getDb(): Database.Database {
   if (instance) return instance;
 
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const db = new Database(DB_PATH);
+  activePath = resolvePath();
+  fs.mkdirSync(path.dirname(activePath), { recursive: true });
+
+  const db = new Database(activePath);
+
+  // WAL leaves sidecar files, which do not survive being copied around, so the
+  // ephemeral copy keeps its journal in memory instead.
+  db.pragma(ephemeral() ? 'journal_mode = MEMORY' : 'journal_mode = WAL');
   db.exec(SCHEMA);
+
   instance = db;
   return db;
 }
 
-export { DB_PATH };
+/** True when writes land on a copy that disappears with the instance. */
+export function isEphemeral(): boolean {
+  return ephemeral();
+}
+
+export function databasePath(): string {
+  return activePath;
+}
+
+export { SOURCE_PATH as DB_PATH };
