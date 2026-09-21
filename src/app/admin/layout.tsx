@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const admin = await requireAdmin();
 
   return (
-    <div className="wrap py-8">
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-ink-line pb-5">
         <div>
           <h1 className="text-2xl">Administration</h1>
