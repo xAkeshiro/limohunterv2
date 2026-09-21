@@ -4,11 +4,11 @@ import { cookies } from 'next/headers';
 import { getDb } from './db';
 import type { User } from './types';
 
-const COOKIE = 'lh_session';
+const COOKIE = 'fm_session';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function secret(): string {
-  return process.env.SESSION_SECRET ?? 'limohunter-dev-secret-change-me';
+  return process.env.SESSION_SECRET ?? 'fleet-marketplace-dev-secret-change-me';
 }
 
 /** `<userId>.<expiry>.<hmac>` — signed so it cannot be forged client-side. */

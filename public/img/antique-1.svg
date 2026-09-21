@@ -1,33 +1,96 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" role="img" aria-label="antique">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-label="antique">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a2130"/>
-      <stop offset="100%" stop-color="#0c1017"/>
+      <stop offset="0%" stop-color="#202838"/><stop offset="55%" stop-color="#151b26"/>
+      <stop offset="100%" stop-color="#0b0e14"/>
     </linearGradient>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2d3646"/>
-      <stop offset="100%" stop-color="#11161f"/>
+      <stop offset="0%" stop-color="#2f3948"/><stop offset="48%" stop-color="#2f3948"/>
+      <stop offset="100%" stop-color="#0c1016"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="72%" r="55%">
-      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.16"/>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#7f93ad" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#1b2431" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7d8a9b"/><stop offset="100%" stop-color="#39434f"/>
+    </linearGradient>
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#26303d"/><stop offset="100%" stop-color="#151c26"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.14"/>
       <stop offset="100%" stop-color="#e6bf57" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="860" height="520" fill="url(#bg)"/>
-  <rect width="860" height="520" fill="url(#glow)"/>
-  <g opacity="0.07" stroke="#9fb0c8" stroke-width="1">
-    <line x1="0" y1="0" x2="860" y2="0"/><line x1="0" y1="52" x2="860" y2="52"/><line x1="0" y1="104" x2="860" y2="104"/><line x1="0" y1="156" x2="860" y2="156"/><line x1="0" y1="208" x2="860" y2="208"/><line x1="0" y1="260" x2="860" y2="260"/><line x1="0" y1="312" x2="860" y2="312"/><line x1="0" y1="364" x2="860" y2="364"/><line x1="0" y1="416" x2="860" y2="416"/><line x1="0" y1="468" x2="860" y2="468"/><line x1="0" y1="520" x2="860" y2="520"/>
-  </g>
-  <ellipse cx="430" cy="404" rx="300" ry="26" fill="#000" opacity="0.4"/>
-  <g transform="translate(0,28)">
-    <path d="M160 316 L196 316 Q206 252 252 248 L300 210 L470 210 Q516 214 534 250 L580 258 Q634 266 640 316 L648 316 Q672 318 672 338 L672 356 Q672 366 660 366 L172 366 Q160 366 160 356 Z" fill="url(#body)"/>
-    <path d="M318 226 L456 226 Q492 230 506 256 L318 256 Z" fill="#16202e" opacity="0.85"/>
-    <circle cx="646" cy="292" r="14" fill="#e6bf57" opacity="0.75"/>
+
+  <rect width="1000" height="620" fill="url(#bg)"/>
+  <ellipse cx="500" cy="330" rx="430" ry="230" fill="url(#pool)"/>
+  <ellipse cx="500" cy="436" rx="400" ry="30" fill="#05070a" opacity="0.55"/>
+  
+    <path d="M150 404 Q150 388 172 386 L206 384 Q214 328 246 322 L300 258 L520 254
+             Q572 260 590 318 L648 326 Q716 336 726 386 L756 388 Q776 390 776 406
+             L776 424 L150 424 Z" fill="url(#body)"/>
+    <path d="M322 300 L442 298 L442 348 L322 348 Z" fill="url(#glass)"/>
+    <path d="M456 298 L512 298 Q556 304 570 348 L456 348 Z" fill="url(#glass)"/>
+    <path d="M449 296 L449 350" stroke="#0c1016" stroke-width="4"/>
+    <path d="M206 384 Q260 340 316 332" stroke="#d8c184" stroke-width="3" fill="none" opacity="0.55"/>
+    <circle cx="730" cy="352" r="19" fill="#f2e2ad" opacity="0.9"/>
+    <circle cx="730" cy="352" r="19" fill="none" stroke="#d8c184" stroke-width="2.5"/>
+    <path d="M642 330 Q690 326 724 340" stroke="#d8c184" stroke-width="3" fill="none" opacity="0.5"/>
     
-    <circle cx="262" cy="366" r="48" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
-    <circle cx="262" cy="366" r="20.16" fill="#2a323f"/> 
-    <circle cx="584" cy="366" r="48" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
-    <circle cx="584" cy="366" r="20.16" fill="#2a323f"/></g>
-  <text x="430" y="474" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
-        font-size="21" letter-spacing="3.5" fill="#8fa0b8" opacity="0.72">ANTIQUE</text>
+  <g>
+    <circle cx="268" cy="424" r="62" fill="#0a0d12"/>
+    <circle cx="268" cy="424" r="60.14" fill="none" stroke="#1d242f" stroke-width="4.96"/>
+    <circle cx="268" cy="424" r="37.199999999999996" fill="url(#rim)"/>
+    <circle cx="268" cy="424" r="37.199999999999996" fill="none" stroke="#5c6878" stroke-width="1.5"/>
+    <line x1="277.92" y1="424"
+                    x2="301.48" y2="424"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="275.01449926937056" y1="431.01449926937056"
+                    x2="291.67393503412563" y2="447.67393503412563"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="268" y1="433.92"
+                    x2="268" y2="457.48"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="260.98550073062944" y1="431.01449926937056"
+                    x2="244.3260649658744" y2="447.67393503412563"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="258.08" y1="424"
+                    x2="234.51999999999998" y2="424"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="260.98550073062944" y1="416.98550073062944"
+                    x2="244.32606496587437" y2="400.32606496587437"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="268" y1="414.08"
+                    x2="268" y2="390.52"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="275.01449926937056" y1="416.98550073062944"
+                    x2="291.67393503412563" y2="400.32606496587437"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/>
+    <circle cx="268" cy="424" r="9.299999999999999" fill="#aab6c6"/>
+  </g> 
+  <g>
+    <circle cx="646" cy="424" r="62" fill="#0a0d12"/>
+    <circle cx="646" cy="424" r="60.14" fill="none" stroke="#1d242f" stroke-width="4.96"/>
+    <circle cx="646" cy="424" r="37.199999999999996" fill="url(#rim)"/>
+    <circle cx="646" cy="424" r="37.199999999999996" fill="none" stroke="#5c6878" stroke-width="1.5"/>
+    <line x1="655.92" y1="424"
+                    x2="679.48" y2="424"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="653.0144992693705" y1="431.01449926937056"
+                    x2="669.6739350341256" y2="447.67393503412563"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="646" y1="433.92"
+                    x2="646" y2="457.48"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="638.9855007306295" y1="431.01449926937056"
+                    x2="622.3260649658744" y2="447.67393503412563"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="636.08" y1="424"
+                    x2="612.52" y2="424"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="638.9855007306295" y1="416.98550073062944"
+                    x2="622.3260649658744" y2="400.32606496587437"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="646" y1="414.08"
+                    x2="646" y2="390.52"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/><line x1="653.0144992693705" y1="416.98550073062944"
+                    x2="669.6739350341256" y2="400.32606496587437"
+                    stroke="#8b97a8" stroke-width="4.6499999999999995" stroke-linecap="round"/>
+    <circle cx="646" cy="424" r="9.299999999999999" fill="#aab6c6"/>
+  </g>
+  <text x="500" y="560" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
+        font-size="20" letter-spacing="4" fill="#8fa0b8" opacity="0.6">ANTIQUE</text>
 </svg>

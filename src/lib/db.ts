@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const DB_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = process.env.DATABASE_PATH ?? path.join(DB_DIR, 'limohunter.db');
+const DB_PATH = process.env.DATABASE_PATH ?? path.join(DB_DIR, 'fleet-marketplace.db');
 
 let instance: Database.Database | null = null;
 

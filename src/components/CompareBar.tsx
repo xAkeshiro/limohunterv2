@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 
-const KEY = 'lh_compare';
-const EVENT = 'lh_compare_changed';
+const KEY = 'fm_compare';
+const EVENT = 'fm_compare_changed';
 const MAX = 4;
 
 export function readCompare(): number[] {

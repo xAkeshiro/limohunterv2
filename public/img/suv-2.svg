@@ -1,34 +1,96 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" role="img" aria-label="suv">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-label="suv front">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a2130"/>
-      <stop offset="100%" stop-color="#0c1017"/>
+      <stop offset="0%" stop-color="#202838"/><stop offset="55%" stop-color="#151b26"/>
+      <stop offset="100%" stop-color="#0b0e14"/>
     </linearGradient>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#333d4f"/>
-      <stop offset="100%" stop-color="#11161f"/>
+      <stop offset="0%" stop-color="#2f3948"/><stop offset="48%" stop-color="#2f3948"/>
+      <stop offset="100%" stop-color="#0c1016"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="72%" r="55%">
-      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.16"/>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#7f93ad" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#1b2431" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7d8a9b"/><stop offset="100%" stop-color="#39434f"/>
+    </linearGradient>
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#26303d"/><stop offset="100%" stop-color="#151c26"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.14"/>
       <stop offset="100%" stop-color="#e6bf57" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="860" height="520" fill="url(#bg)"/>
-  <rect width="860" height="520" fill="url(#glow)"/>
-  <g opacity="0.07" stroke="#9fb0c8" stroke-width="1">
-    <line x1="0" y1="0" x2="860" y2="0"/><line x1="0" y1="52" x2="860" y2="52"/><line x1="0" y1="104" x2="860" y2="104"/><line x1="0" y1="156" x2="860" y2="156"/><line x1="0" y1="208" x2="860" y2="208"/><line x1="0" y1="260" x2="860" y2="260"/><line x1="0" y1="312" x2="860" y2="312"/><line x1="0" y1="364" x2="860" y2="364"/><line x1="0" y1="416" x2="860" y2="416"/><line x1="0" y1="468" x2="860" y2="468"/><line x1="0" y1="520" x2="860" y2="520"/>
-  </g>
-  <ellipse cx="430" cy="404" rx="300" ry="26" fill="#000" opacity="0.4"/>
-  <g transform="translate(0,28)">
-    <path d="M150 300 L178 300 Q188 226 250 222 L500 222 Q566 226 578 300 L636 300 Q664 302 664 326 L664 352 Q664 362 652 362 L162 362 Q150 362 150 352 Z" fill="url(#body)"/>
-    <rect x="214" y="240" width="112" height="56" rx="8" fill="#16202e" opacity="0.85"/>
-    <rect x="342" y="240" width="108" height="56" rx="8" fill="#16202e" opacity="0.85"/>
-    <path d="M466 240 L502 240 Q544 246 556 296 L466 296 Z" fill="#16202e" opacity="0.85"/>
+
+  <rect width="1000" height="620" fill="url(#bg)"/>
+  <ellipse cx="500" cy="330" rx="430" ry="230" fill="url(#pool)"/>
+  <ellipse cx="500" cy="436" rx="400" ry="30" fill="#05070a" opacity="0.55"/>
+  
+    <path d="M300 424 L300 236 Q304 210 352 206 L690 200
+             Q742 206 752 240 L788 424 Z" fill="url(#body)"/>
+    <path d="M318 330 Q324 224 366 218 L680 212
+             Q726 218 736 330 Z" fill="url(#glass)"/>
+    <path d="M300 348 L788 342" stroke="#c9d3e0" stroke-width="2" opacity="0.25"/>
+    <rect x="316" y="364" width="94" height="20" rx="9" fill="#fff6d8" opacity="0.92"/>
+    <rect x="672" y="362" width="94" height="20" rx="9" fill="#fff6d8" opacity="0.92"/>
+    <rect x="410" y="382" width="256" height="30" rx="8" fill="#0d1218" opacity="0.75"/>
+    <rect x="410" y="382" width="256" height="30" rx="8" fill="none" stroke="#5c6878" stroke-width="2" opacity="0.6"/>
+    <rect x="352" y="398" width="372" height="18" rx="8" fill="#0d1218" opacity="0.6"/>
     
-    <circle cx="252" cy="362" r="44" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
-    <circle cx="252" cy="362" r="18.48" fill="#2a323f"/> 
-    <circle cx="572" cy="362" r="44" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
-    <circle cx="572" cy="362" r="18.48" fill="#2a323f"/></g>
-  <text x="430" y="474" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
-        font-size="21" letter-spacing="3.5" fill="#8fa0b8" opacity="0.72">SUV</text>
+  <g>
+    <circle cx="330" cy="424" r="40" fill="#0a0d12"/>
+    <circle cx="330" cy="424" r="38.8" fill="none" stroke="#1d242f" stroke-width="3.2"/>
+    <circle cx="330" cy="424" r="24" fill="url(#rim)"/>
+    <circle cx="330" cy="424" r="24" fill="none" stroke="#5c6878" stroke-width="1.5"/>
+    <line x1="336.4" y1="424"
+                    x2="351.6" y2="424"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="334.5254833995939" y1="428.5254833995939"
+                    x2="345.2735064736294" y2="439.2735064736294"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="330" y1="430.4"
+                    x2="330" y2="445.6"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="325.4745166004061" y1="428.5254833995939"
+                    x2="314.7264935263706" y2="439.2735064736294"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="323.6" y1="424"
+                    x2="308.4" y2="424"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="325.4745166004061" y1="419.4745166004061"
+                    x2="314.7264935263706" y2="408.7264935263706"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="330" y1="417.6"
+                    x2="330" y2="402.4"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="334.5254833995939" y1="419.4745166004061"
+                    x2="345.2735064736294" y2="408.7264935263706"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="330" cy="424" r="6" fill="#aab6c6"/>
+  </g> 
+  <g>
+    <circle cx="758" cy="424" r="40" fill="#0a0d12"/>
+    <circle cx="758" cy="424" r="38.8" fill="none" stroke="#1d242f" stroke-width="3.2"/>
+    <circle cx="758" cy="424" r="24" fill="url(#rim)"/>
+    <circle cx="758" cy="424" r="24" fill="none" stroke="#5c6878" stroke-width="1.5"/>
+    <line x1="764.4" y1="424"
+                    x2="779.6" y2="424"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="762.5254833995939" y1="428.5254833995939"
+                    x2="773.2735064736295" y2="439.2735064736294"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="758" y1="430.4"
+                    x2="758" y2="445.6"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="753.4745166004061" y1="428.5254833995939"
+                    x2="742.7264935263705" y2="439.2735064736294"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="751.6" y1="424"
+                    x2="736.4" y2="424"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="753.4745166004061" y1="419.4745166004061"
+                    x2="742.7264935263705" y2="408.7264935263706"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="758" y1="417.6"
+                    x2="758" y2="402.4"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/><line x1="762.5254833995939" y1="419.4745166004061"
+                    x2="773.2735064736294" y2="408.7264935263706"
+                    stroke="#8b97a8" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="758" cy="424" r="6" fill="#aab6c6"/>
+  </g>
+  <text x="500" y="560" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
+        font-size="20" letter-spacing="4" fill="#8fa0b8" opacity="0.6">SUV FRONT</text>
 </svg>

@@ -4,7 +4,7 @@ import InquiryForm from '@/components/InquiryForm';
 
 export const metadata: Metadata = {
   title: 'Contact',
-  description: 'Contact LimoHunter about buying, selling or financing second-hand limousines and luxury transportation equipment.',
+  description: 'Contact Fleet Marketplace about buying, selling or financing second-hand limousines and luxury transportation equipment.',
 };
 
 export default function ContactPage() {
@@ -41,7 +41,7 @@ export default function ContactPage() {
               <dt className="text-xs uppercase tracking-wide text-slate-500">Sell your vehicle</dt>
               <dd className="mt-1">
                 <Link href="/sell" className="text-slate-200 hover:text-brand-200">
-                  List equipment on LimoHunter →
+                  List equipment on Fleet Marketplace →
                 </Link>
               </dd>
             </div>

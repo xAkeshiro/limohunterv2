@@ -24,7 +24,7 @@ const COLUMNS = [
   {
     title: 'Company',
     links: [
-      { href: '/about', label: 'About LimoHunter' },
+      { href: '/about', label: 'About Fleet Marketplace' },
       { href: '/contact', label: 'Contact us' },
       { href: '/login', label: 'Sign in' },
       { href: '/register', label: 'Create account' },
@@ -69,7 +69,7 @@ export default function SiteFooter() {
 
       <div className="border-t border-ink-line">
         <div className="wrap flex flex-col gap-2 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} LimoHunter. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Fleet Marketplace. All rights reserved.</p>
           <p>Vehicle listings shown are sample data for demonstration.</p>
         </div>
       </div>

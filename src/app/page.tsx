@@ -129,7 +129,7 @@ export default function HomePage() {
 
       {/* How it works */}
       <section className="wrap py-14">
-        <h2 className="text-2xl sm:text-3xl">How LimoHunter works</h2>
+        <h2 className="text-2xl sm:text-3xl">How Fleet Marketplace works</h2>
         <div className="mt-7 grid gap-5 md:grid-cols-3">
           {STEPS.map((step, i) => (
             <div key={step.title} className="card p-6">

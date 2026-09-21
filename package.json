@@ -1,8 +1,8 @@
 {
-  "name": "limohunterv2",
+  "name": "fleet-marketplace",
   "version": "1.0.0",
   "private": true,
-  "description": "LimoHunter v2 - used limousine & luxury vehicle marketplace",
+  "description": "Fleet Marketplace - used limousine & luxury vehicle marketplace",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "setup": "npm run seed && npm run build",
-    "verify": "tsx scripts/verify.ts"
+    "verify": "tsx scripts/verify.ts",
+    "import-photos": "node scripts/import-photos.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

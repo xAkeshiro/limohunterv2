@@ -1,6 +1,6 @@
 /**
  * Seeds the marketplace with demo inventory so the site is browsable out of the
- * box. This data is illustrative sample content, NOT the real LimoHunter
+ * box. This data is illustrative sample content, NOT the real Fleet Marketplace
  * inventory — replace it with a real import before going live.
  */
 import bcrypt from 'bcryptjs';
@@ -380,18 +380,18 @@ function run() {
 
   const demoId = Number(
     insertUser.run(
-      'demo@limohunter.com', hash, 'Demo Seller', 'Demo Coach Sales', '253-314-7568', 'member',
+      'demo@fleetmarketplace.com', hash, 'Demo Seller', 'Demo Coach Sales', '253-314-7568', 'member',
     ).lastInsertRowid,
   );
   const adminId = Number(
     insertUser.run(
-      'admin@limohunter.com', hash, 'LimoHunter Admin', 'LimoHunter', '253-314-7568', 'admin',
+      'admin@fleetmarketplace.com', hash, 'Alex Rivera', 'Fleet Marketplace', '253-314-7568', 'admin',
     ).lastInsertRowid,
   );
 
   const sellers = [
     { id: demoId, name: 'Demo Coach Sales', phone: '253-314-7568' },
-    { id: adminId, name: 'LimoHunter Direct', phone: '253-314-7568' },
+    { id: adminId, name: 'Fleet Marketplace Direct', phone: '253-314-7568' },
   ];
 
   const insert = db.prepare(
@@ -454,7 +454,7 @@ function run() {
   const { n } = db.prepare('SELECT COUNT(*) AS n FROM listings').get() as { n: number };
   console.log(`seeded ${n} listings and ${sellers.length} users`);
   console.log(`database: ${DB_PATH}`);
-  console.log('demo login: demo@limohunter.com / demo1234');
+  console.log('demo login: demo@fleetmarketplace.com / demo1234');
 }
 
 run();

@@ -32,7 +32,7 @@ const hash = bcrypt.hashSync('demo1234', 10);
 t('correct password verifies', bcrypt.compareSync('demo1234', hash));
 t('wrong password rejected', !bcrypt.compareSync('wrong', hash));
 const seeded = db
-  .prepare("SELECT password_hash FROM users WHERE email='demo@limohunter.com'")
+  .prepare("SELECT password_hash FROM users WHERE email='demo@fleetmarketplace.com'")
   .get() as { password_hash: string } | undefined;
 t('seeded demo login works', Boolean(seeded) && bcrypt.compareSync('demo1234', seeded!.password_hash));
 
@@ -94,7 +94,7 @@ saveInquiry({ listingId: first.id, name: 'Test Buyer', email: 't@example.com', m
 t('inquiry saved', (db.prepare('SELECT COUNT(*) n FROM inquiries').get() as { n: number }).n === before + 1);
 db.prepare('DELETE FROM inquiries WHERE email = ?').run('t@example.com');
 
-const uid = (db.prepare("SELECT id FROM users WHERE email='demo@limohunter.com'").get() as { id: number }).id;
+const uid = (db.prepare("SELECT id FROM users WHERE email='demo@fleetmarketplace.com'").get() as { id: number }).id;
 t('favorite adds', toggleFavorite(uid, first.id) === true);
 t('favorite toggles off', toggleFavorite(uid, first.id) === false);
 

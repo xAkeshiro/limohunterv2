@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'About',
-  description: 'LimoHunter connects buyers and sellers of second-hand limousines and luxury transportation equipment across the United States.',
+  description: 'Fleet Marketplace connects buyers and sellers of second-hand limousines and luxury transportation equipment across the United States.',
 };
 
 export default function AboutPage() {
@@ -21,7 +21,7 @@ export default function AboutPage() {
       </nav>
 
       <header className="max-w-3xl">
-        <h1 className="text-3xl sm:text-4xl">About LimoHunter</h1>
+        <h1 className="text-3xl sm:text-4xl">About Fleet Marketplace</h1>
         <p className="mt-4 text-lg leading-relaxed text-slate-400">
           We are a marketplace built specifically for second-hand limousines and luxury
           transportation equipment — the vehicles that general classified sites handle badly
@@ -54,7 +54,7 @@ export default function AboutPage() {
               common beyond carrying passengers.
             </p>
             <p>
-              LimoHunter lists all of it in one place, described in the terms the industry
+              Fleet Marketplace lists all of it in one place, described in the terms the industry
               actually uses: body style, passenger capacity, interior build, service history
               and the equipment that comes with it.
             </p>

@@ -11,3 +11,5 @@ data/*.db-shm
 *.log
 .DS_Store
 next-env.d.ts
+public/uploads/*
+!public/uploads/.gitkeep

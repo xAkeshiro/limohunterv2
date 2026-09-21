@@ -15,7 +15,13 @@ const NAV = [
   { href: '/contact', label: 'Contact' },
 ];
 
-export default function SiteHeader({ userName }: { userName?: string | null }) {
+export default function SiteHeader({
+  userName,
+  isAdmin = false,
+}: {
+  userName?: string | null;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -26,7 +32,7 @@ export default function SiteHeader({ userName }: { userName?: string | null }) {
   return (
     <header className="sticky top-0 z-40 border-b border-ink-line bg-ink/95 backdrop-blur">
       <div className="wrap flex h-16 items-center justify-between gap-4">
-        <Link href="/" aria-label="LimoHunter home">
+        <Link href="/" aria-label="Fleet Marketplace home">
           <Logo />
         </Link>
 
@@ -54,6 +60,14 @@ export default function SiteHeader({ userName }: { userName?: string | null }) {
           >
             (253) 314-7568
           </a>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-brand-300 hover:text-brand-200 lg:inline-flex"
+            >
+              Admin
+            </Link>
+          )}
           {userName ? (
             <Link href="/account" className="btn-ghost hidden whitespace-nowrap sm:inline-flex">
               {userName.split(' ')[0]}
@@ -94,6 +108,11 @@ export default function SiteHeader({ userName }: { userName?: string | null }) {
                 {item.label}
               </Link>
             ))}
+            {isAdmin && (
+              <Link href="/admin" className="rounded-lg px-2 py-3 text-sm font-semibold text-brand-300">
+                Admin
+              </Link>
+            )}
             <div className="mt-2 flex gap-2 border-t border-ink-line pt-3">
               <Link href={userName ? '/account' : '/login'} className="btn-ghost flex-1">
                 {userName ? 'My account' : 'Sign in'}

@@ -1,36 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" role="img" aria-label="shuttle bus">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-label="shuttle bus interior">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1a2130"/>
-      <stop offset="100%" stop-color="#0c1017"/>
+      <stop offset="0%" stop-color="#202838"/><stop offset="55%" stop-color="#151b26"/>
+      <stop offset="100%" stop-color="#0b0e14"/>
     </linearGradient>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#3a4557"/>
-      <stop offset="100%" stop-color="#11161f"/>
+      <stop offset="0%" stop-color="#2f3948"/><stop offset="48%" stop-color="#2f3948"/>
+      <stop offset="100%" stop-color="#0c1016"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="72%" r="55%">
-      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.16"/>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#7f93ad" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#1b2431" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7d8a9b"/><stop offset="100%" stop-color="#39434f"/>
+    </linearGradient>
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#26303d"/><stop offset="100%" stop-color="#151c26"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.14"/>
       <stop offset="100%" stop-color="#e6bf57" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="860" height="520" fill="url(#bg)"/>
-  <rect width="860" height="520" fill="url(#glow)"/>
-  <g opacity="0.07" stroke="#9fb0c8" stroke-width="1">
-    <line x1="0" y1="0" x2="860" y2="0"/><line x1="0" y1="52" x2="860" y2="52"/><line x1="0" y1="104" x2="860" y2="104"/><line x1="0" y1="156" x2="860" y2="156"/><line x1="0" y1="208" x2="860" y2="208"/><line x1="0" y1="260" x2="860" y2="260"/><line x1="0" y1="312" x2="860" y2="312"/><line x1="0" y1="364" x2="860" y2="364"/><line x1="0" y1="416" x2="860" y2="416"/><line x1="0" y1="468" x2="860" y2="468"/><line x1="0" y1="520" x2="860" y2="520"/>
-  </g>
-  <ellipse cx="430" cy="404" rx="300" ry="26" fill="#000" opacity="0.4"/>
-  <g transform="translate(0,28)">
-    <path d="M72 316 Q72 180 158 176 L706 176 Q782 180 786 260 L786 344 Q786 356 772 356 L86 356 Q72 356 72 344 Z" fill="url(#body)"/>
-    <rect x="118" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
-    <rect x="252" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
-    <rect x="386" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
-    <rect x="520" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
-    <rect x="654" y="204" width="102" height="70" rx="8" fill="#16202e" opacity="0.9"/>
+
+  <rect width="1000" height="620" fill="url(#bg)"/>
+  <ellipse cx="500" cy="330" rx="430" ry="230" fill="url(#pool)"/>
+  
+  
+    <path d="M120 150 L880 150 L840 470 L160 470 Z" fill="#11161f"/>
+    <path d="M120 150 L880 150 L864 218 L136 218 Z" fill="#161d28"/>
+    <circle cx="168" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="252" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="336" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="420" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="504" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="588" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="672" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="756" cy="184" r="5" fill="#e6bf57" opacity="0.85"/><circle cx="840" cy="184" r="5" fill="#e6bf57" opacity="0.85"/>
+    <path d="M136 218 L864 218" stroke="#e6bf57" stroke-width="2" opacity="0.4"/>
     
-    <circle cx="180" cy="356" r="44" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
-    <circle cx="180" cy="356" r="18.48" fill="#2a323f"/> 
-    <circle cx="664" cy="356" r="44" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
-    <circle cx="664" cy="356" r="18.48" fill="#2a323f"/></g>
-  <text x="430" y="474" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
-        font-size="21" letter-spacing="3.5" fill="#8fa0b8" opacity="0.72">SHUTTLE BUS</text>
+    <rect x="150" y="250" width="200" height="200" rx="14" fill="url(#leather)"/>
+    <rect x="158" y="260" width="184" height="180" rx="10" fill="none"
+          stroke="#2c3542" stroke-width="2" opacity="0.8"/>
+    <line x1="164" y1="272" x2="336" y2="272"
+             stroke="#394453" stroke-width="2" opacity="0.7"/><line x1="164" y1="350" x2="336" y2="350"
+             stroke="#394453" stroke-width="2" opacity="0.7"/><line x1="164" y1="428" x2="336" y2="428"
+             stroke="#394453" stroke-width="2" opacity="0.7"/>
+    
+    <rect x="650" y="250" width="200" height="200" rx="14" fill="url(#leather)"/>
+    <rect x="658" y="260" width="184" height="180" rx="10" fill="none"
+          stroke="#2c3542" stroke-width="2" opacity="0.8"/>
+    <line x1="664" y1="272" x2="836" y2="272"
+             stroke="#394453" stroke-width="2" opacity="0.7"/><line x1="664" y1="350" x2="836" y2="350"
+             stroke="#394453" stroke-width="2" opacity="0.7"/><line x1="664" y1="428" x2="836" y2="428"
+             stroke="#394453" stroke-width="2" opacity="0.7"/>
+    
+    <rect x="388" y="300" width="224" height="150" rx="14" fill="url(#leather)"/>
+    <rect x="396" y="310" width="208" height="130" rx="10" fill="none"
+          stroke="#2c3542" stroke-width="2" opacity="0.8"/>
+    <line x1="402" y1="322" x2="598" y2="322"
+             stroke="#394453" stroke-width="2" opacity="0.7"/><line x1="402" y1="375" x2="598" y2="375"
+             stroke="#394453" stroke-width="2" opacity="0.7"/><line x1="402" y1="428" x2="598" y2="428"
+             stroke="#394453" stroke-width="2" opacity="0.7"/>
+    <rect x="388" y="250" width="224" height="34" rx="8" fill="#1b2230"/>
+    <rect x="404" y="258" width="46" height="18" rx="4" fill="#9fb0c8" opacity="0.5"/>
+    <rect x="462" y="258" width="46" height="18" rx="4" fill="#9fb0c8" opacity="0.5"/>
+    <rect x="520" y="258" width="46" height="18" rx="4" fill="#9fb0c8" opacity="0.5"/>
+    <path d="M160 470 L840 470" stroke="#e6bf57" stroke-width="2.5" opacity="0.35"/>
+    <ellipse cx="500" cy="200" rx="250" ry="40" fill="#e6bf57" opacity="0.06"/>
+  <text x="500" y="560" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
+        font-size="20" letter-spacing="4" fill="#8fa0b8" opacity="0.6">SHUTTLE BUS INTERIOR</text>
 </svg>

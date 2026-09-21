@@ -10,7 +10,7 @@ export default function Logo({ className = '' }: { className?: string }) {
         <path d="M11.4 14.4h9.4q1.4 0 2 1.2h-13q.6-1.2 1.6-1.2Z" fill="#0e1116" opacity=".55" />
       </svg>
       <span className="text-lg font-bold tracking-tight text-white">
-        Limo<span className="text-brand-300">Hunter</span>
+        Fleet<span className="text-brand-300">Marketplace</span>
       </span>
     </span>
   );
