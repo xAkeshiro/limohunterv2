@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ink text-slate-200 antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply text-white font-semibold tracking-tight;
+  }
+
+  a {
+    @apply transition-colors;
+  }
+
+  /* Keyboard focus stays visible everywhere without doubling up on mouse click. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-300 ring-offset-2 ring-offset-ink;
+  }
+}
+
+@layer components {
+  .wrap {
+    @apply mx-auto w-full max-w-page px-4 sm:px-6;
+  }
+
+  .card {
+    @apply rounded-xl border border-ink-line bg-ink-soft;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
+           text-sm font-semibold transition-colors disabled:opacity-50
+           disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-300 text-ink hover:bg-brand-200;
+  }
+
+  .btn-ghost {
+    @apply btn border border-ink-line text-slate-200 hover:border-brand-300 hover:text-brand-200;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-ink-line bg-ink px-3 py-2.5 text-sm
+           text-slate-100 placeholder:text-slate-500
+           focus:border-brand-300 focus:outline-none;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-ink-line
+           bg-ink px-3 py-1 text-xs font-medium text-slate-300;
+  }
+
+  .link-muted {
+    @apply text-slate-400 hover:text-brand-200;
+  }
+}

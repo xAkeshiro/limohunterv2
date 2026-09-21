@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" role="img" aria-label="party bus">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2130"/>
+      <stop offset="100%" stop-color="#0c1017"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#333d4f"/>
+      <stop offset="100%" stop-color="#11161f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="72%" r="55%">
+      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#e6bf57" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="860" height="520" fill="url(#bg)"/>
+  <rect width="860" height="520" fill="url(#glow)"/>
+  <g opacity="0.07" stroke="#9fb0c8" stroke-width="1">
+    <line x1="0" y1="0" x2="860" y2="0"/><line x1="0" y1="52" x2="860" y2="52"/><line x1="0" y1="104" x2="860" y2="104"/><line x1="0" y1="156" x2="860" y2="156"/><line x1="0" y1="208" x2="860" y2="208"/><line x1="0" y1="260" x2="860" y2="260"/><line x1="0" y1="312" x2="860" y2="312"/><line x1="0" y1="364" x2="860" y2="364"/><line x1="0" y1="416" x2="860" y2="416"/><line x1="0" y1="468" x2="860" y2="468"/><line x1="0" y1="520" x2="860" y2="520"/>
+  </g>
+  <ellipse cx="430" cy="404" rx="300" ry="26" fill="#000" opacity="0.4"/>
+  <g transform="translate(0,28)">
+    <path d="M72 316 Q72 180 158 176 L706 176 Q782 180 786 260 L786 344 Q786 356 772 356 L86 356 Q72 356 72 344 Z" fill="url(#body)"/>
+    <rect x="118" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
+    <rect x="252" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
+    <rect x="386" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
+    <rect x="520" y="204" width="118" height="70" rx="8" fill="#16202e" opacity="0.8"/>
+    <rect x="654" y="204" width="102" height="70" rx="8" fill="#16202e" opacity="0.9"/>
+    
+    <circle cx="180" cy="356" r="44" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
+    <circle cx="180" cy="356" r="18.48" fill="#2a323f"/> 
+    <circle cx="664" cy="356" r="44" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
+    <circle cx="664" cy="356" r="18.48" fill="#2a323f"/></g>
+  <text x="430" y="474" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
+        font-size="21" letter-spacing="3.5" fill="#8fa0b8" opacity="0.72">PARTY BUS</text>
+</svg>

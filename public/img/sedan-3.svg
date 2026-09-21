@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" width="860" height="520" role="img" aria-label="sedan">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2130"/>
+      <stop offset="100%" stop-color="#0c1017"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#28313f"/>
+      <stop offset="100%" stop-color="#11161f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="72%" r="55%">
+      <stop offset="0%" stop-color="#e6bf57" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#e6bf57" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="860" height="520" fill="url(#bg)"/>
+  <rect width="860" height="520" fill="url(#glow)"/>
+  <g opacity="0.07" stroke="#9fb0c8" stroke-width="1">
+    <line x1="0" y1="0" x2="860" y2="0"/><line x1="0" y1="52" x2="860" y2="52"/><line x1="0" y1="104" x2="860" y2="104"/><line x1="0" y1="156" x2="860" y2="156"/><line x1="0" y1="208" x2="860" y2="208"/><line x1="0" y1="260" x2="860" y2="260"/><line x1="0" y1="312" x2="860" y2="312"/><line x1="0" y1="364" x2="860" y2="364"/><line x1="0" y1="416" x2="860" y2="416"/><line x1="0" y1="468" x2="860" y2="468"/><line x1="0" y1="520" x2="860" y2="520"/>
+  </g>
+  <ellipse cx="430" cy="404" rx="300" ry="26" fill="#000" opacity="0.4"/>
+  <g transform="translate(0,28)">
+    <path d="M150 300 L190 300 Q210 248 260 244 L470 244 Q520 248 552 300 L620 300 Q650 302 650 326 L650 352 Q650 362 638 362 L162 362 Q150 362 150 352 Z" fill="url(#body)"/>
+    <path d="M228 296 Q244 262 276 260 L386 260 L386 296 Z" fill="#16202e" opacity="0.85"/>
+    <path d="M402 260 L468 260 Q504 264 528 296 L402 296 Z" fill="#16202e" opacity="0.85"/>
+    
+    <circle cx="262" cy="362" r="40" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
+    <circle cx="262" cy="362" r="16.8" fill="#2a323f"/> 
+    <circle cx="556" cy="362" r="40" fill="#0b0e13" stroke="#3a4454" stroke-width="3"/>
+    <circle cx="556" cy="362" r="16.8" fill="#2a323f"/></g>
+  <text x="430" y="474" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif"
+        font-size="21" letter-spacing="3.5" fill="#8fa0b8" opacity="0.72">SEDAN</text>
+</svg>
