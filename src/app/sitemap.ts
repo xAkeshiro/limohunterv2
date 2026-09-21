@@ -1,10 +1,11 @@
 import type { MetadataRoute } from 'next';
+import { siteUrl } from '@/lib/site';
 import { searchListings } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.SITE_URL ?? 'http://localhost:3000';
+  const base = siteUrl();
 
   const staticRoutes = ['', '/inventory', '/sell', '/finance', '/compare', '/about', '/contact'].map(
     (path) => ({

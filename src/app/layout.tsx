@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import { currentUser } from '@/lib/auth';
+import { siteUrlObject } from '@/lib/site';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? 'http://localhost:3000'),
+  metadataBase: siteUrlObject(),
   title: {
     default: 'Fleet Marketplace — Largest second hand inventory in US',
     template: '%s | Fleet Marketplace',
