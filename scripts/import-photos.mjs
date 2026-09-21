@@ -23,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import Database from 'better-sqlite3';
+import { Database } from 'node-sqlite3-wasm';
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -102,15 +102,14 @@ function buildJobs() {
     }));
 }
 
-const select = db.prepare('SELECT id, images FROM listings WHERE slug = ?');
-const update = db.prepare('UPDATE listings SET images = ? WHERE id = ?');
+
 
 let updated = 0;
 let attached = 0;
 let missing = 0;
 
 for (const job of buildJobs()) {
-  const row = select.get(job.slug);
+  const row = db.get('SELECT id, images FROM listings WHERE slug = ?', [job.slug]);
   if (!row) {
     console.warn(`  skip   ${job.slug} — no listing with that slug`);
     missing += 1;
@@ -138,10 +137,11 @@ for (const job of buildJobs()) {
   // Drawn placeholders are always replaced once real photography arrives.
   const kept = REPLACE ? [] : existing.filter((p) => !p.startsWith('/img/'));
 
-  update.run(JSON.stringify([...kept, ...paths]), row.id);
+  db.run('UPDATE listings SET images = ? WHERE id = ?', [JSON.stringify([...kept, ...paths]), row.id]);
   updated += 1;
   console.log(`  ok     ${job.slug} — ${paths.length} photo(s)`);
 }
 
 console.log(`\n${updated} listing(s) updated, ${attached} photo(s) attached, ${missing} slug(s) not found`);
+db.close();
 console.log(`database: ${DB_PATH}`);
