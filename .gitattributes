@@ -1,0 +1,2 @@
+# Keep the shareable zip out of GitHub-generated archives (and out of itself).
+download/ export-ignore
