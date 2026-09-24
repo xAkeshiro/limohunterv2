@@ -6,6 +6,7 @@ import Pagination from '@/components/Pagination';
 import CompareBar from '@/components/CompareBar';
 import SortSelect from '@/components/SortSelect';
 import { getFacets, searchListings } from '@/lib/queries';
+import { withPhotosAll } from '@/lib/photos';
 import type { ListingFilters } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -61,7 +62,8 @@ export default async function InventoryPage({
     per_page: 12,
   };
 
-  const results = searchListings(filters);
+  const found = searchListings(filters);
+  const results = { ...found, items: await withPhotosAll(found.items) };
   const facets = getFacets();
 
   // Query string used by pagination links, with `page` stripped out.

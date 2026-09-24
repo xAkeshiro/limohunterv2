@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { currentUser } from '@/lib/auth';
 import { favoritesForUser, listingsForUser } from '@/lib/queries';
+import { withPhotosAll } from '@/lib/photos';
 import { deleteListing, logout } from '@/lib/actions';
 import { money, miles, shortDate } from '@/lib/format';
 import ListingCard from '@/components/ListingCard';
@@ -15,7 +16,7 @@ export default async function AccountPage() {
   if (!user) redirect('/login');
 
   const listings = listingsForUser(user.id);
-  const saved = favoritesForUser(user.id);
+  const saved = await withPhotosAll(favoritesForUser(user.id));
 
   return (
     <div className="wrap py-10">

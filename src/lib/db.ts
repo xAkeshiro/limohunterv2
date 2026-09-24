@@ -192,6 +192,7 @@ CREATE TABLE IF NOT EXISTS listings (
   description    TEXT NOT NULL DEFAULT '',
   features       TEXT NOT NULL DEFAULT '[]',
   images         TEXT NOT NULL DEFAULT '[]',
+  image_credits  TEXT NOT NULL DEFAULT '[]',
   seller_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
   seller_name    TEXT NOT NULL DEFAULT '',
   seller_phone   TEXT NOT NULL DEFAULT '',
@@ -227,6 +228,14 @@ CREATE TABLE IF NOT EXISTS favorites (
 );
 `;
 
+/** Brings databases created by an earlier version up to the current columns. */
+function migrate(db: DbHandle): void {
+  const columns = db.prepare('PRAGMA table_info(listings)').all<{ name: string }>();
+  if (!columns.some((c) => c.name === 'image_credits')) {
+    db.exec("ALTER TABLE listings ADD COLUMN image_credits TEXT NOT NULL DEFAULT '[]'");
+  }
+}
+
 export function getDb(): DbHandle {
   if (instance) return instance;
 
@@ -239,6 +248,7 @@ export function getDb(): DbHandle {
   // ephemeral copy keeps its journal in memory instead.
   db.pragma(ephemeral() ? 'journal_mode = MEMORY' : 'journal_mode = WAL');
   db.exec(SCHEMA);
+  migrate(db);
 
   instance = db;
   return db;

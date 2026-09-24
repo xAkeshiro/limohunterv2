@@ -90,13 +90,15 @@ src/
     queries.ts       public reads
     actions.ts       public writes (inquiries, auth, listings, favourites)
     admin.ts         admin guard + admin-only reads
-    admin-actions.ts admin writes, including photo uploads
+    admin-actions.ts admin writes, photo uploads, auto-fill
+    photos.ts        Wikimedia Commons photo search and matching
     auth.ts          hashing, session signing/verification
     format.ts        currency, mileage, dates, slugs, amortisation
     types.ts         shared types and the body-style vocabulary
 scripts/
   seed.ts           demo inventory              (npm run seed)
   verify.ts         34-check data-layer test    (npm run verify)
+  verify-photos.ts  30-check photo matcher test (npm run verify)
   make-images.mjs   regenerates illustrations
   import-photos.mjs bulk-attaches real photos   (npm run import-photos)
 ```
@@ -105,39 +107,43 @@ scripts/
 
 ## Photography
 
-Listings ship with **original illustrations** — four views per vehicle class (side, front,
-rear, interior) drawn for this project, carrying no manufacturer badging. They exist so the
-site looks complete before real photography arrives. There are three ways to replace them:
+### Automatic photos (on by default)
 
-**1. Upload in the admin** — edit any listing, remove the drawings, upload real photos
-(JPG/PNG/WebP/AVIF, up to 8 MB each). Files land in `public/uploads`.
+Listings that only have the bundled drawings automatically show **real photos of their
+make and model**, pulled from [Wikimedia Commons](https://commons.wikimedia.org) at render
+time. No API key, no setup: it works as soon as the site is deployed.
 
-**2. Bulk import from folders** — one folder per listing slug:
+- Searches are built from make, model and vehicle class. Stretch and bus conversions
+  are never matched to their base vehicle (a party bus on an F-550 won't show a pickup).
+- Results are filtered for relevance: landscape only, at least 800px wide, file title must
+  name the make or model, and logos, interiors and scale models are skipped.
+- Every Commons file is freely licensed, most with an attribution requirement, so each
+  photo's **author and license are shown** under the gallery with links back to the file.
+- Pages label them **"Representative photo"**. They show the model, not the vehicle for
+  sale, so replace them with real photos before any listing goes to a buyer.
+- Lookups are cached. If Wikimedia is unreachable, pages fall back to the drawings
+  immediately and stop retrying for a minute, so an outage never slows the site.
+
+Set `AUTO_PHOTOS=0` to turn it off.
+
+### Choosing and storing photos
+
+- **Auto-fill photos** (admin → Listings) finds and *stores* photos for every listing still
+  on drawings in one click. Stored photos survive in a downloaded database with no further
+  calls to Wikimedia.
+- **Find photos online** (listing editor) searches Commons and adds picks one by one, with
+  credits kept automatically.
+- **Upload** real photos (needs `BLOB_READ_WRITE_TOKEN` on Vercel) or **paste image URLs**.
+
+Adding any real photo retires the drawings for that listing. Removing every photo returns
+it to automatic photos.
+
+### Bulk import from your own files
 
 ```bash
-npm run import-photos -- --dir ./photos
-#   photos/2019-cadillac-xts-stretch-limousine-1/front.jpg
-#   photos/2019-cadillac-xts-stretch-limousine-1/rear.jpg
+npm run import-photos -- --dir ./photos          # photos/<listing-slug>/*.jpg
+npm run import-photos -- --manifest ./photos.json [--link] [--replace]
 ```
-
-**3. Bulk import from a manifest** — map slugs to URLs or local paths:
-
-```bash
-npm run import-photos -- --manifest ./photos.json
-```
-
-```json
-{
-  "2019-cadillac-xts-stretch-limousine-1": [
-    "https://example.com/photo-1.jpg",
-    "./local/photo-2.jpg"
-  ]
-}
-```
-
-Both importers append to a listing's existing real photos and always drop the drawn
-placeholders. Pass `--replace` to clear everything first. Run them from a machine with
-normal network access — a restricted environment may not be able to reach image hosts.
 
 Make sure you hold the rights to any photography you publish.
 

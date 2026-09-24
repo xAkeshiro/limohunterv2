@@ -3,6 +3,7 @@ import SearchBar from '@/components/SearchBar';
 import ListingCard from '@/components/ListingCard';
 import CompareBar from '@/components/CompareBar';
 import { countByBodyStyle, getFeatured, getRecent, stats } from '@/lib/queries';
+import { classPhoto, withPhotosAll } from '@/lib/photos';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,10 +22,14 @@ const STEPS = [
   },
 ];
 
-export default function HomePage() {
-  const featured = getFeatured(6);
-  const recent = getRecent(8);
-  const categories = countByBodyStyle();
+export default async function HomePage() {
+  const [featured, recent] = await Promise.all([
+    withPhotosAll(getFeatured(6)),
+    withPhotosAll(getRecent(8)),
+  ]);
+  const categories = await Promise.all(
+    countByBodyStyle().map(async (cat) => ({ ...cat, photo: await classPhoto(cat.value) })),
+  );
   const totals = stats();
 
   return (
@@ -86,7 +91,7 @@ export default function HomePage() {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`/img/${cat.value.toLowerCase().replace(/\s+/g, '-')}-1.svg`}
+                src={cat.photo ?? `/img/${cat.value.toLowerCase().replace(/\s+/g, '-')}-1.svg`}
                 alt=""
                 loading="lazy"
                 className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-105"

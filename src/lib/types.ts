@@ -46,6 +46,7 @@ export interface Listing {
   description: string;
   features: string;
   images: string;
+  image_credits: string;
   seller_id: number | null;
   seller_name: string;
   seller_phone: string;
@@ -84,10 +85,22 @@ export interface ListingFilters {
   per_page?: number;
 }
 
+/** Attribution for a photo that came from a freely licensed source. */
+export interface ImageCredit {
+  src: string;
+  author: string;
+  license: string;
+  licenseUrl: string | null;
+  sourceUrl: string;
+}
+
 /** Parsed view of a listing row, with JSON columns decoded. */
-export interface ListingView extends Omit<Listing, 'features' | 'images'> {
+export interface ListingView extends Omit<Listing, 'features' | 'images' | 'image_credits'> {
   features: string[];
   images: string[];
+  image_credits: ImageCredit[];
+  /** Set when the photos shown were sourced automatically rather than stored. */
+  photos_auto?: boolean;
 }
 
 export function parseListing(row: Listing): ListingView {
@@ -95,7 +108,27 @@ export function parseListing(row: Listing): ListingView {
     ...row,
     features: safeJson<string[]>(row.features, []),
     images: safeJson<string[]>(row.images, []),
+    image_credits: safeJson<ImageCredit[]>(row.image_credits ?? '[]', []),
   };
+}
+
+/** The bundled drawings under /img are stand-ins, never real photography. */
+export function isPlaceholder(src: string): boolean {
+  return src.startsWith('/img/');
+}
+
+/**
+ * True when any photo shown came from a stock source rather than being of the
+ * actual vehicle, whether it was found at render time or stored by an admin.
+ */
+export function isRepresentative(listing: Pick<ListingView, 'images' | 'image_credits' | 'photos_auto'>): boolean {
+  if (listing.photos_auto) return true;
+  const credited = new Set(listing.image_credits.map((c) => c.src));
+  return listing.images.some((src) => credited.has(src));
+}
+
+export function needsPhotos(listing: Pick<ListingView, 'images'>): boolean {
+  return listing.images.length === 0 || listing.images.every(isPlaceholder);
 }
 
 function safeJson<T>(raw: string, fallback: T): T {

@@ -11,6 +11,9 @@ import FavoriteButton from '@/components/FavoriteButton';
 import { getListingBySlug, getSimilar, incrementViews } from '@/lib/queries';
 import { currentUser } from '@/lib/auth';
 import { money, miles, shortDate } from '@/lib/format';
+import { withPhotos, withPhotosAll } from '@/lib/photos';
+import PhotoCredits from '@/components/PhotoCredits';
+import { isRepresentative } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +23,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const listing = getListingBySlug(slug);
-  if (!listing) return { title: 'Listing not found' };
+  const found = getListingBySlug(slug);
+  if (!found) return { title: 'Listing not found' };
+  const listing = await withPhotos(found);
 
   return {
     title: listing.title,
@@ -36,11 +40,14 @@ export async function generateMetadata({
 
 export default async function ListingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const listing = getListingBySlug(slug);
-  if (!listing) notFound();
+  const found = getListingBySlug(slug);
+  if (!found) notFound();
 
-  incrementViews(listing.id);
-  const similar = getSimilar(listing, 3);
+  incrementViews(found.id);
+  const [listing, similar] = await Promise.all([
+    withPhotos(found),
+    withPhotosAll(getSimilar(found, 3)),
+  ]);
   const user = await currentUser();
 
   const specs: [string, string][] = [
@@ -69,6 +76,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
     brand: { '@type': 'Brand', name: listing.make },
     model: listing.model,
     vehicleSeatingCapacity: listing.passengers,
+    image: listing.images.filter((src) => /^https?:/.test(src)),
     mileageFromOdometer: { '@type': 'QuantitativeValue', value: listing.mileage, unitCode: 'SMI' },
     offers: {
       '@type': 'Offer',
@@ -101,6 +109,11 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
       <div className="grid gap-10 lg:grid-cols-[1.55fr_1fr]">
         <div>
           <Gallery images={listing.images} alt={listing.title} />
+          <PhotoCredits
+            credits={listing.image_credits}
+            representative={isRepresentative(listing)}
+            vehicle={`${listing.make} ${listing.model}`}
+          />
 
           <section className="mt-8">
             <h2 className="text-xl">Vehicle description</h2>

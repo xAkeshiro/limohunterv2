@@ -4,8 +4,10 @@ import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { adminCreateListing, adminUpdateListing } from '@/lib/admin-actions';
 import type { FormState } from '@/lib/actions';
-import type { ListingView } from '@/lib/types';
-import { BODY_STYLES } from '@/lib/types';
+import type { ImageCredit, ListingView } from '@/lib/types';
+import { BODY_STYLES, isPlaceholder } from '@/lib/types';
+import type { Photo } from '@/lib/photos';
+import PhotoFinder from './PhotoFinder';
 import FormMessage, { FieldError } from '@/components/FormMessage';
 
 const INITIAL: FormState = { ok: false, message: '' };
@@ -14,7 +16,13 @@ const FUELS = ['Gasoline', 'Diesel', 'Hybrid', 'Electric'];
 const DRIVETRAINS = ['RWD', 'FWD', 'AWD', '4WD'];
 const TRANSMISSIONS = ['Automatic', 'Manual'];
 
-export default function AdminListingForm({ listing }: { listing?: ListingView }) {
+export default function AdminListingForm({
+  listing,
+  defaultPhotoQuery = '',
+}: {
+  listing?: ListingView;
+  defaultPhotoQuery?: string;
+}) {
   const editing = Boolean(listing);
   const [state, action, pending] = useActionState(
     editing ? adminUpdateListing : adminCreateListing,
@@ -23,6 +31,27 @@ export default function AdminListingForm({ listing }: { listing?: ListingView })
 
   // Photos the editor has chosen to keep; removing one just drops it from this list.
   const [images, setImages] = useState<string[]>(listing?.images ?? []);
+  const [credits, setCredits] = useState<Record<string, ImageCredit>>(() =>
+    Object.fromEntries((listing?.image_credits ?? []).map((c) => [c.src, c])),
+  );
+
+  /** Adding a real photo retires the drawn placeholders. */
+  const addPhotos = (photos: Photo[]) => {
+    setImages((prev) => {
+      const next = prev.filter((src) => !isPlaceholder(src));
+      for (const p of photos) if (!next.includes(p.src)) next.push(p.src);
+      return next;
+    });
+    setCredits((prev) => {
+      const next = { ...prev };
+      for (const p of photos) {
+        next[p.src] = { src: p.src, author: p.author, license: p.license, licenseUrl: p.licenseUrl, sourceUrl: p.sourceUrl };
+      }
+      return next;
+    });
+  };
+
+  const creditList = images.map((src) => credits[src]).filter(Boolean);
 
   const err = (k: string) => state.errors?.[k];
 
@@ -149,6 +178,11 @@ export default function AdminListingForm({ listing }: { listing?: ListingView })
                 <input type="hidden" name="keep_image" value={src} />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="" className="aspect-[16/10] w-full rounded-lg border border-ink-line object-cover" />
+                {credits[src] && (
+                  <p className="mt-1 truncate text-[11px] text-slate-500" title={credits[src].author}>
+                    {credits[src].author} · {credits[src].license}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => setImages((prev) => prev.filter((p) => p !== src))}
@@ -161,6 +195,19 @@ export default function AdminListingForm({ listing }: { listing?: ListingView })
             ))}
           </div>
         )}
+
+        <input type="hidden" name="image_credits" value={JSON.stringify(creditList)} />
+
+        {images.length > 0 && images.every(isPlaceholder) && (
+          <p className="mt-3 text-xs text-slate-400">
+            This listing only has drawn placeholders, so the public site fills in matching photos
+            automatically. Add photos here to choose exactly which ones appear.
+          </p>
+        )}
+
+        <div className="mt-4">
+          <PhotoFinder defaultQuery={defaultPhotoQuery} selected={images} onAdd={addPhotos} />
+        </div>
 
         <div className="mt-4">
           <label className="label" htmlFor="image_urls">Add photos by URL — one per line</label>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getListingsByIds } from '@/lib/queries';
+import { withPhotosAll } from '@/lib/photos';
 import { money, miles } from '@/lib/format';
 import ClearCompare from '@/components/ClearCompare';
 
@@ -42,7 +43,7 @@ export default async function ComparePage({
     .filter((n) => Number.isInteger(n) && n > 0)
     .slice(0, 4);
 
-  const listings = getListingsByIds(ids);
+  const listings = await withPhotosAll(getListingsByIds(ids));
 
   return (
     <div className="wrap py-10">

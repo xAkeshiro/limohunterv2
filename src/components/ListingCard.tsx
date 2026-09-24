@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ListingView } from '@/lib/types';
+import { isRepresentative, type ListingView } from '@/lib/types';
 import { money, miles } from '@/lib/format';
 import CompareToggle from './CompareToggle';
 
@@ -25,6 +25,11 @@ export default function ListingCard({ listing }: { listing: ListingView }) {
           <span className="absolute right-3 top-3 rounded-md bg-ink/85 px-2 py-1 text-[11px] font-semibold text-slate-200">
             {listing.body_style}
           </span>
+          {isRepresentative(listing) && (
+            <span className="absolute bottom-2 left-2 rounded bg-ink/80 px-1.5 py-0.5 text-[10px] text-slate-300">
+              Representative photo
+            </span>
+          )}
         </div>
       </Link>
 

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { adminListings, adminStatusOptions } from '@/lib/admin';
-import { adminToggleFlag } from '@/lib/admin-actions';
+import { adminAutofillPhotos, adminToggleFlag } from '@/lib/admin-actions';
+import { withPhotosAll } from '@/lib/photos';
+import AutofillButton from '@/components/admin/AutofillButton';
 import { money, miles, shortDate } from '@/lib/format';
 import AdminListingFilters from '@/components/admin/AdminListingFilters';
 import StatusSelect from '@/components/admin/StatusSelect';
@@ -8,9 +10,22 @@ import StatusPill from '@/components/admin/StatusPill';
 import ListingRowActions from '@/components/admin/ListingRowActions';
 
 export const dynamic = 'force-dynamic';
+// The bulk photo fill runs inside this route and makes many lookups.
+export const maxDuration = 60;
 
 type SP = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || undefined;
+
+function AutoChip() {
+  return (
+    <span
+      className="ml-1.5 rounded border border-sky-500/40 bg-sky-500/10 px-1.5 py-px text-[10px] font-semibold text-sky-300"
+      title="Photos are found automatically. Edit the listing or use Auto-fill photos to store them."
+    >
+      Auto photos
+    </span>
+  );
+}
 
 function FlagButtons({ id, featured, sold }: { id: number; featured: number; sold: number }) {
   return (
@@ -53,6 +68,10 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   });
 
   const statuses = adminStatusOptions();
+  // Thumbnails show what visitors see, including auto-sourced photos.
+  const items = await withPhotosAll(results.items);
+  const filled = one(sp.filled);
+  const tried = one(sp.tried);
 
   const query = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) {
@@ -73,14 +92,36 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
             description, specification or photos.
           </p>
         </div>
-        <Link href="/admin/listings/new" className="btn-primary">Add listing</Link>
+        <div className="flex flex-wrap gap-2">
+          <form action={adminAutofillPhotos}>
+            <AutofillButton />
+          </form>
+          <Link href="/admin/listings/new" className="btn-primary">Add listing</Link>
+        </div>
       </div>
+
+      {filled !== undefined && (
+        <p
+          role="status"
+          className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+            Number(filled) > 0 || Number(tried) === 0
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+              : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+          }`}
+        >
+          {Number(tried) === 0
+            ? 'Every listing already has photos.'
+            : Number(filled) > 0
+              ? `Saved photos to ${filled} of ${tried} listing${Number(tried) === 1 ? '' : 's'} that needed them.`
+              : 'Could not reach Wikimedia Commons just now, so no photos were saved. Try again in a minute.'}
+        </p>
+      )}
 
       <div className="mt-5">
         <AdminListingFilters statuses={statuses} />
       </div>
 
-      {results.items.length === 0 ? (
+      {items.length === 0 ? (
         <div className="card mt-5 p-10 text-center">
           <p className="text-sm text-slate-400">No listings match those filters.</p>
           <Link href="/admin/listings" className="btn-ghost mt-4">Clear filters</Link>
@@ -89,7 +130,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         <>
           {/* Cards below lg, where a table cannot show actions without scrolling. */}
           <ul className="mt-5 space-y-3 lg:hidden">
-            {results.items.map((l) => (
+            {items.map((l) => (
               <li key={l.id} className="card p-4">
                 <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -107,6 +148,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                     </Link>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {l.body_style} · {l.city}, {l.state}
+                      {l.photos_auto && <AutoChip />}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-brand-300">
                       {money(l.price)}{' '}
@@ -140,7 +182,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                 </tr>
               </thead>
               <tbody>
-                {results.items.map((l) => (
+                {items.map((l) => (
                   <tr key={l.id} className="border-b border-ink-line/60 align-top">
                     <td className="py-3 pr-3">
                       <div className="flex items-start gap-3">
@@ -159,6 +201,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                           </Link>
                           <p className="mt-0.5 text-xs text-slate-500">
                             {l.body_style} · {l.city}, {l.state}
+                            {l.photos_auto && <AutoChip />}
                           </p>
                         </div>
                       </div>

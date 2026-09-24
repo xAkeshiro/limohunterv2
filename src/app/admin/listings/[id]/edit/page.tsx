@@ -5,6 +5,7 @@ import { adminDeleteListing } from '@/lib/admin-actions';
 import AdminListingForm from '@/components/admin/AdminListingForm';
 import ConfirmDelete from '@/components/admin/ConfirmDelete';
 import { shortDate } from '@/lib/format';
+import { queryPlan } from '@/lib/photos';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Edit listing' };
@@ -31,7 +32,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mt-6">
-        <AdminListingForm listing={listing} />
+        <AdminListingForm listing={listing} defaultPhotoQuery={queryPlan(listing)[0]?.q ?? ''} />
       </div>
     </div>
   );

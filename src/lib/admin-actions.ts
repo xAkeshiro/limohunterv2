@@ -7,6 +7,8 @@ import { getDb } from './db';
 import { requireAdmin } from './admin';
 import { slugify } from './format';
 import { storeImages, parseImageUrls } from './storage';
+import { findPhotosForListing, searchPhotos, toCredit, type Photo } from './photos';
+import { isPlaceholder, needsPhotos, parseListing, type ImageCredit, type Listing } from './types';
 import type { FormState } from './actions';
 
 
@@ -17,6 +19,34 @@ function fieldErrors(error: z.ZodError): Record<string, string> {
     if (!out[key]) out[key] = issue.message;
   }
   return out;
+}
+
+/**
+ * Once any real photo is present the drawn placeholders are dropped, so a
+ * listing never shows a drawing beside a photograph.
+ */
+function finalImages(images: string[]): string[] {
+  const unique = [...new Set(images.filter(Boolean))];
+  return unique.some((src) => !isPlaceholder(src)) ? unique.filter((src) => !isPlaceholder(src)) : unique;
+}
+
+/** Keeps only credits for photos that are still attached to the listing. */
+function creditsFor(images: string[], raw: FormDataEntryValue | null): ImageCredit[] {
+  let parsed: unknown = [];
+  try {
+    parsed = JSON.parse(String(raw ?? '[]'));
+  } catch {
+    parsed = [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  const kept = new Set(images);
+  return parsed
+    .filter((c): c is ImageCredit =>
+      typeof c === 'object' && c !== null && typeof (c as ImageCredit).src === 'string' &&
+      typeof (c as ImageCredit).sourceUrl === 'string')
+    .filter((c) => kept.has(c.src))
+    .map(toCredit);
 }
 
 const editSchema = z.object({
@@ -74,7 +104,8 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
   const uploads = data.getAll('photos').filter((v): v is File => v instanceof File);
   const { paths: added, skipped, errors } = await storeImages(uploads);
   const linked = parseImageUrls(String(data.get('image_urls') ?? ''));
-  const images = [...kept, ...added, ...linked];
+  const images = finalImages([...kept, ...added, ...linked]);
+  const credits = creditsFor(images, data.get('image_credits'));
 
   const v = parsed.data;
   db.prepare(
@@ -84,8 +115,8 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
        fuel=@fuel, transmission=@transmission, drivetrain=@drivetrain,
        exterior_color=@exterior_color, interior_color=@interior_color, vin=@vin,
        city=@city, state=@state, description=@description, features=@features,
-       images=@images, seller_name=@seller_name, seller_phone=@seller_phone,
-       status=@status, featured=@featured, sold=@sold
+       images=@images, image_credits=@image_credits, seller_name=@seller_name,
+       seller_phone=@seller_phone, status=@status, featured=@featured, sold=@sold
      WHERE id=@id`,
   ).run({
     ...v,
@@ -96,6 +127,7 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
       (v.features ?? '').split('\n').map((l) => l.trim()).filter(Boolean),
     ),
     images: JSON.stringify(images),
+    image_credits: JSON.stringify(credits),
   });
 
   revalidatePath('/admin/listings');
@@ -196,18 +228,18 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
   const uploads = data.getAll('photos').filter((f): f is File => f instanceof File);
   const { paths } = await storeImages(uploads);
   const linked = parseImageUrls(String(data.get('image_urls') ?? ''));
-  const images = [...paths, ...linked];
-  if (images.length === 0) images.push('/img/placeholder.svg');
+  const images = finalImages([...paths, ...linked]);
+  const credits = creditsFor(images, data.get('image_credits'));
 
   db.prepare(
     `INSERT INTO listings (
        slug, title, body_style, make, model, year, price, mileage, passengers,
        condition, fuel, transmission, drivetrain, exterior_color, interior_color, vin,
-       city, state, description, features, images, seller_name, seller_phone, status
+       city, state, description, features, images, image_credits, seller_name, seller_phone, status
      ) VALUES (
        @slug, @title, @body_style, @make, @model, @year, @price, @mileage, @passengers,
        @condition, @fuel, @transmission, @drivetrain, @exterior_color, @interior_color, @vin,
-       @city, @state, @description, @features, @images, @seller_name, @seller_phone, 'published'
+       @city, @state, @description, @features, @images, @image_credits, @seller_name, @seller_phone, 'published'
      )`,
   ).run({
     ...v,
@@ -216,9 +248,50 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
     state: v.state.toUpperCase(),
     features: JSON.stringify((v.features ?? '').split('\n').map((l) => l.trim()).filter(Boolean)),
     images: JSON.stringify(images),
+    image_credits: JSON.stringify(credits),
   });
 
   revalidatePath('/admin/listings');
   revalidatePath('/inventory');
   redirect('/admin/listings');
+}
+
+/** Free-text photo search for the listing editor. */
+export async function adminSearchPhotos(query: string): Promise<Photo[]> {
+  await requireAdmin();
+  return searchPhotos(String(query ?? '').slice(0, 120), 12);
+}
+
+/**
+ * Finds and stores photos for every listing still on drawn placeholders.
+ * Storing them (rather than relying on render-time lookup) means they survive
+ * in a downloaded database with no further calls to Wikimedia.
+ */
+export async function adminAutofillPhotos(): Promise<void> {
+  await requireAdmin();
+
+  const db = getDb();
+  const rows = (db.prepare('SELECT * FROM listings').all() as unknown as Listing[]).map(parseListing);
+  const targets = rows.filter(needsPhotos);
+
+  let filled = 0;
+  const queue = [...targets];
+  const worker = async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) {
+      const photos = await findPhotosForListing(next);
+      if (photos.length === 0) continue;
+      db.prepare('UPDATE listings SET images = ?, image_credits = ? WHERE id = ?').run(
+        JSON.stringify(photos.map((p) => p.src)),
+        JSON.stringify(photos.map(toCredit)),
+        next.id,
+      );
+      filled += 1;
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+
+  revalidatePath('/admin/listings');
+  revalidatePath('/inventory');
+  revalidatePath('/');
+  redirect(`/admin/listings?filled=${filled}&tried=${targets.length}`);
 }

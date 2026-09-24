@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "setup": "npm run seed && npm run build",
-    "verify": "tsx scripts/verify.ts",
+    "verify": "tsx scripts/verify.ts && tsx scripts/verify-photos.ts",
     "import-photos": "node scripts/import-photos.mjs"
   },
   "dependencies": {
