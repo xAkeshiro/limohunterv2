@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { parseListing, type Listing, type ListingFilters, type ListingView } from './types';
+import { liveSql, parseListing, type Listing, type ListingFilters, type ListingView } from './types';
 
 const SORTS: Record<string, string> = {
   newest: 'l.created_at DESC, l.id DESC',
@@ -23,7 +23,7 @@ export interface ListingPage {
  * a parameter, so user input never reaches the SQL text.
  */
 function buildWhere(f: ListingFilters): { sql: string; params: unknown[] } {
-  const clauses: string[] = ["l.status = 'published'"];
+  const clauses: string[] = [liveSql('l')];
   const params: unknown[] = [];
 
   if (f.q) {
@@ -89,7 +89,7 @@ export function searchListings(f: ListingFilters = {}): ListingPage {
 
 export function getListingBySlug(slug: string): ListingView | null {
   const row = getDb()
-    .prepare("SELECT * FROM listings WHERE slug = ? AND status = 'published'")
+    .prepare(`SELECT * FROM listings WHERE slug = ? AND ${liveSql()}`)
     .get(slug) as Listing | undefined;
   return row ? parseListing(row) : null;
 }
@@ -98,7 +98,7 @@ export function getListingsByIds(ids: number[]): ListingView[] {
   if (ids.length === 0) return [];
   const rows = getDb()
     .prepare(
-      `SELECT * FROM listings WHERE id IN (${ids.map(() => '?').join(',')}) AND status = 'published'`,
+      `SELECT * FROM listings WHERE id IN (${ids.map(() => '?').join(',')}) AND ${liveSql()}`,
     )
     .all(...ids) as Listing[];
 
@@ -110,7 +110,7 @@ export function getListingsByIds(ids: number[]): ListingView[] {
 export function getFeatured(limit = 6): ListingView[] {
   const rows = getDb()
     .prepare(
-      "SELECT * FROM listings WHERE status = 'published' AND featured = 1 ORDER BY created_at DESC LIMIT ?",
+      `SELECT * FROM listings WHERE ${liveSql()} AND featured = 1 ORDER BY created_at DESC LIMIT ?`,
     )
     .all(limit) as Listing[];
   return rows.map(parseListing);
@@ -118,7 +118,7 @@ export function getFeatured(limit = 6): ListingView[] {
 
 export function getRecent(limit = 8): ListingView[] {
   const rows = getDb()
-    .prepare("SELECT * FROM listings WHERE status = 'published' ORDER BY created_at DESC LIMIT ?")
+    .prepare(`SELECT * FROM listings WHERE ${liveSql()} ORDER BY created_at DESC LIMIT ?`)
     .all(limit) as Listing[];
   return rows.map(parseListing);
 }
@@ -127,7 +127,7 @@ export function getSimilar(listing: ListingView, limit = 3): ListingView[] {
   const rows = getDb()
     .prepare(
       `SELECT * FROM listings
-       WHERE status = 'published' AND id != ? AND body_style = ?
+       WHERE ${liveSql()} AND id != ? AND body_style = ?
        ORDER BY ABS(price - ?) ASC LIMIT ?`,
     )
     .all(listing.id, listing.body_style, listing.price, limit) as Listing[];
@@ -146,7 +146,7 @@ export function getFacets() {
       db
         .prepare(
           `SELECT ${name} AS value, COUNT(*) AS count FROM listings
-           WHERE status = 'published' GROUP BY ${name} ORDER BY count DESC, value ASC`,
+           WHERE ${liveSql()} GROUP BY ${name} ORDER BY count DESC, value ASC`,
         )
         .all() as { value: string; count: number }[]
     ).filter((r) => Boolean(r.value));
@@ -155,7 +155,7 @@ export function getFacets() {
     .prepare(
       `SELECT MIN(price) AS minPrice, MAX(price) AS maxPrice,
               MIN(year) AS minYear, MAX(year) AS maxYear
-       FROM listings WHERE status = 'published'`,
+       FROM listings WHERE ${liveSql()}`,
     )
     .get() as { minPrice: number; maxPrice: number; minYear: number; maxYear: number };
 
@@ -172,7 +172,7 @@ export function countByBodyStyle(): { value: string; count: number }[] {
   return getDb()
     .prepare(
       `SELECT body_style AS value, COUNT(*) AS count FROM listings
-       WHERE status = 'published' GROUP BY body_style ORDER BY count DESC`,
+       WHERE ${liveSql()} GROUP BY body_style ORDER BY count DESC`,
     )
     .all() as { value: string; count: number }[];
 }
@@ -184,7 +184,7 @@ export function stats() {
       `SELECT COUNT(*) AS listings,
               COUNT(DISTINCT make)  AS makes,
               COUNT(DISTINCT state) AS states
-       FROM listings WHERE status = 'published'`,
+       FROM listings WHERE ${liveSql()}`,
     )
     .get() as { listings: number; makes: number; states: number };
   const sellers = db.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number };

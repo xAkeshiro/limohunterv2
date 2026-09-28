@@ -8,6 +8,11 @@ import { saveInquiry, toggleFavorite } from './queries';
 import { checkPassword, currentUser, endSession, hashPassword, startSession } from './auth';
 import { slugify } from './format';
 import type { User } from './types';
+import { getPlan, planLabel } from './plans';
+import { safeNextPath } from './next-path';
+import {
+  LISTING_EXPIRY_SQL, cancelSubscription, quotaFor, renewListing, resumeSubscription, subscribe,
+} from './subscriptions';
 
 export interface FormState {
   ok: boolean;
@@ -37,7 +42,7 @@ export async function submitInquiry(_prev: FormState, data: FormData): Promise<F
   const parsed = inquirySchema.safeParse({
     name: data.get('name'),
     email: data.get('email'),
-    phone: data.get('phone'),
+    phone: data.get('phone') ?? undefined,
     message: data.get('message'),
   });
 
@@ -62,6 +67,7 @@ export async function submitInquiry(_prev: FormState, data: FormData): Promise<F
 
 /* ------------------------------------------------------------------- auth */
 
+
 const registerSchema = z.object({
   name: z.string().trim().min(2, 'Please enter your name'),
   email: z.string().trim().toLowerCase().email('Enter a valid email address'),
@@ -75,8 +81,10 @@ export async function register(_prev: FormState, data: FormData): Promise<FormSt
     name: data.get('name'),
     email: data.get('email'),
     password: data.get('password'),
-    company: data.get('company'),
-    phone: data.get('phone'),
+    // The signup form no longer asks for these; an absent field arrives as
+    // null, which .optional() rejects, so treat it as not provided.
+    company: data.get('company') ?? undefined,
+    phone: data.get('phone') ?? undefined,
   });
 
   if (!parsed.success) {
@@ -101,7 +109,7 @@ export async function register(_prev: FormState, data: FormData): Promise<FormSt
     );
 
   await startSession(Number(result.lastInsertRowid));
-  redirect('/account');
+  redirect(safeNextPath(data.get('next')) ?? '/account');
 }
 
 export async function login(_prev: FormState, data: FormData): Promise<FormState> {
@@ -120,7 +128,7 @@ export async function login(_prev: FormState, data: FormData): Promise<FormState
   }
 
   await startSession(user.id);
-  redirect('/account');
+  redirect(safeNextPath(data.get('next')) ?? '/account');
 }
 
 export async function logout(): Promise<void> {
@@ -172,6 +180,25 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
   }
 
   const user = await currentUser();
+  if (!user) {
+    return { ok: false, message: 'Create an account and choose a plan to list a vehicle.' };
+  }
+
+  // Admins list house inventory: no plan needed and no expiry.
+  const isAdmin = user.role === 'admin';
+  if (!isAdmin) {
+    const quota = quotaFor(user.id);
+    if (quota.reason === 'no-plan') {
+      return { ok: false, message: 'Choose a subscription plan before listing a vehicle.' };
+    }
+    if (quota.reason === 'full') {
+      return {
+        ok: false,
+        message: `Your ${planLabel(quota.subscription!.plan)} plan allows ${quota.limit} active listing${quota.limit === 1 ? '' : 's'} and all are in use. Upgrade, or remove or let a listing expire.`,
+      };
+    }
+  }
+
   const v = parsed.data;
   const db = getDb();
 
@@ -195,11 +222,12 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
     `INSERT INTO listings (
        slug, title, body_style, make, model, year, price, mileage, passengers,
        condition, fuel, exterior_color, interior_color, city, state,
-       description, features, images, seller_id, seller_name, seller_phone, status
+       description, features, images, seller_id, seller_name, seller_phone, status, expires_at
      ) VALUES (
        @slug, @title, @body_style, @make, @model, @year, @price, @mileage, @passengers,
        @condition, @fuel, @exterior_color, @interior_color, @city, @state,
-       @description, @features, @images, @seller_id, @seller_name, @seller_phone, 'published'
+       @description, @features, @images, @seller_id, @seller_name, @seller_phone, 'published',
+       ${isAdmin ? 'NULL' : LISTING_EXPIRY_SQL}
      )`,
   ).run({
     ...v,
@@ -207,10 +235,11 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
     slug,
     features: JSON.stringify(features),
     images: JSON.stringify(images),
-    seller_id: user?.id ?? null,
+    seller_id: user.id,
   });
 
   revalidatePath('/inventory');
+  revalidatePath('/account');
   revalidatePath('/');
   redirect(`/listing/${slug}`);
 }
@@ -240,3 +269,49 @@ export async function favorite(data: FormData): Promise<void> {
   revalidatePath('/account');
 }
 
+
+/* ----------------------------------------------------------- subscriptions */
+
+export async function subscribeToPlan(data: FormData): Promise<void> {
+  const plan = getPlan(String(data.get('plan') ?? ''));
+  if (!plan) redirect('/subscriptions');
+
+  const user = await currentUser();
+  if (!user) {
+    redirect(`/register?next=${encodeURIComponent(`/subscriptions/checkout?plan=${plan.id}`)}`);
+  }
+
+  subscribe(user.id, plan.id);
+  revalidatePath('/account');
+  revalidatePath('/subscriptions');
+  redirect(`/account?subscribed=${plan.id}`);
+}
+
+export async function cancelPlan(): Promise<void> {
+  const user = await currentUser();
+  if (!user) redirect('/login');
+  cancelSubscription(user.id);
+  revalidatePath('/account');
+  revalidatePath('/subscriptions');
+}
+
+export async function resumePlan(): Promise<void> {
+  const user = await currentUser();
+  if (!user) redirect('/login');
+  resumeSubscription(user.id);
+  revalidatePath('/account');
+  revalidatePath('/subscriptions');
+}
+
+export async function renewMyListing(data: FormData): Promise<void> {
+  const user = await currentUser();
+  if (!user) redirect('/login');
+
+  const id = Number(data.get('id'));
+  if (!Number.isInteger(id)) return;
+
+  const result = renewListing(user.id, id);
+  revalidatePath('/account');
+  revalidatePath('/inventory');
+  if (!result.ok) redirect(`/account?renew=${result.reason}`);
+}

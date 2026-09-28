@@ -54,6 +54,7 @@ export interface Listing {
   sold: number;
   status: string;
   views: number;
+  expires_at: string | null;
   created_at: string;
 }
 
@@ -138,4 +139,13 @@ function safeJson<T>(raw: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * SQL condition for a listing the public can see: published and not past its
+ * listing period. Pass the table alias when the query uses one.
+ */
+export function liveSql(alias = ''): string {
+  const a = alias ? `${alias}.` : '';
+  return `${a}status = 'published' AND (${a}expires_at IS NULL OR ${a}expires_at > datetime('now'))`;
 }

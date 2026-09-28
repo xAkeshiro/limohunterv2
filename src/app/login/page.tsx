@@ -2,12 +2,19 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { LoginForm } from '@/components/AuthForms';
 import { currentUser } from '@/lib/auth';
+import { safeNextPath } from '@/lib/next-path';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Sign in' };
 
-export default async function LoginPage() {
-  if (await currentUser()) redirect('/account');
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const next = safeNextPath(Array.isArray(sp.next) ? sp.next[0] : sp.next) ?? undefined;
+  if (await currentUser()) redirect(next ?? '/account');
 
   return (
     <div className="wrap flex justify-center py-16">
@@ -18,7 +25,7 @@ export default async function LoginPage() {
         </p>
 
         <div className="card mt-7 p-6">
-          <LoginForm />
+          <LoginForm next={next} />
         </div>
 
         <p className="mt-5 rounded-lg border border-ink-line bg-ink-soft px-4 py-3 text-center text-xs text-slate-400">

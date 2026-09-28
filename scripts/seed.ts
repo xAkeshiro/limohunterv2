@@ -6,6 +6,7 @@
 import bcrypt from 'bcryptjs';
 import { getDb, DB_PATH } from '../src/lib/db';
 import { slugify } from '../src/lib/format';
+import { BILLING_DAYS } from '../src/lib/plans';
 
 interface Seed {
   title: string;
@@ -367,9 +368,9 @@ const LISTINGS: Seed[] = [
 function run() {
   const db = getDb();
 
-  db.exec('DELETE FROM favorites; DELETE FROM inquiries; DELETE FROM listings; DELETE FROM users;');
+  db.exec('DELETE FROM subscriptions; DELETE FROM favorites; DELETE FROM inquiries; DELETE FROM listings; DELETE FROM users;');
   db.exec(
-    "DELETE FROM sqlite_sequence WHERE name IN ('listings','users','inquiries');",
+    "DELETE FROM sqlite_sequence WHERE name IN ('listings','users','inquiries','subscriptions');",
   );
 
   const hash = bcrypt.hashSync('demo1234', 10);
@@ -399,20 +400,35 @@ function run() {
        slug, title, body_style, make, model, year, price, mileage, passengers,
        condition, fuel, transmission, drivetrain, exterior_color, interior_color,
        vin, city, state, description, features, images,
-       seller_id, seller_name, seller_phone, featured, created_at
+       seller_id, seller_name, seller_phone, featured, expires_at, created_at
      ) VALUES (
        @slug, @title, @body_style, @make, @model, @year, @price, @mileage, @passengers,
        @condition, @fuel, @transmission, @drivetrain, @exterior_color, @interior_color,
        @vin, @city, @state, @description, @features, @images,
-       @seller_id, @seller_name, @seller_phone, @featured, @created_at
+       @seller_id, @seller_name, @seller_phone, @featured, @expires_at, @created_at
      )`,
   );
+
+  const stamp = (offsetDays: number) =>
+    new Date(Date.now() + offsetDays * 86_400_000).toISOString().replace('T', ' ').slice(0, 19);
+
+  /**
+   * The demo seller owns two listings placed under their plan: one live and
+   * one already past its listing period, so quotas and renewal show up at
+   * once. Everything else is house inventory: admin-owned, never expires.
+   */
+  const DEMO_LISTINGS: Record<string, number> = {
+    '2015 Lincoln MKT 120" Stretch Limousine': 21,
+    '2014 International 3200 Shuttle — 28 Passenger': -3,
+  };
 
   const insertAll = db.transaction((rows: Seed[]) => {
     rows.forEach((row, index) => {
       const key = IMAGE_KEY[row.body_style] ?? 'sedan';
       const images = [1, 2, 3, 4].map((n) => `/img/${key}-${n}.svg`);
-      const seller = sellers[index % sellers.length];
+      const display = sellers[index % sellers.length];
+      const demoDays = DEMO_LISTINGS[row.title];
+      const isDemo = demoDays !== undefined;
       const created = new Date(Date.now() - index * 36 * 3600 * 1000)
         .toISOString()
         .replace('T', ' ')
@@ -440,16 +456,23 @@ function run() {
         description: row.description,
         features: JSON.stringify(row.features),
         images: JSON.stringify(images),
-        seller_id: seller.id,
-        seller_name: seller.name,
-        seller_phone: seller.phone,
-        featured: row.featured ? 1 : 0,
-        created_at: created,
+        seller_id: isDemo ? demoId : adminId,
+        seller_name: isDemo ? 'Demo Coach Sales' : display.name,
+        seller_phone: display.phone,
+        featured: row.featured && !isDemo ? 1 : 0,
+        expires_at: isDemo ? stamp(demoDays) : null,
+        created_at: isDemo ? stamp(demoDays - 30) : created,
       });
     });
   });
 
   insertAll(LISTINGS);
+
+  // Demo seller is on the individual Silver plan: 2 slots, 1 in use.
+  db.prepare(
+    `INSERT INTO subscriptions (user_id, plan_id, status, started_at, current_period_end)
+     VALUES (?, 'individual-silver', 'active', datetime('now', '-9 days'), datetime('now', '+${BILLING_DAYS - 9} days'))`,
+  ).run(demoId);
 
   const { n } = db.prepare('SELECT COUNT(*) AS n FROM listings').get() as { n: number };
   console.log(`seeded ${n} listings and ${sellers.length} users`);

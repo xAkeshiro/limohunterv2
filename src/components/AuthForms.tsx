@@ -7,12 +7,15 @@ import FormMessage, { FieldError } from './FormMessage';
 
 const INITIAL: FormState = { ok: false, message: '' };
 
-export function LoginForm() {
+const withNext = (path: string, next?: string) => (next ? `${path}?next=${encodeURIComponent(next)}` : path);
+
+export function LoginForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(login, INITIAL);
 
   return (
     <form action={action} className="space-y-4">
       <FormMessage state={state} />
+      {next && <input type="hidden" name="next" value={next} />}
 
       <div>
         <label className="label" htmlFor="login-email">Email</label>
@@ -21,10 +24,7 @@ export function LoginForm() {
 
       <div>
         <label className="label" htmlFor="login-password">Password</label>
-        <input
-          id="login-password" name="password" type="password" className="field" required
-          autoComplete="current-password"
-        />
+        <input id="login-password" name="password" type="password" className="field" required autoComplete="current-password" />
       </div>
 
       <button type="submit" className="btn-primary w-full" disabled={pending}>
@@ -33,7 +33,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-slate-400">
         No account?{' '}
-        <Link href="/register" className="font-semibold text-brand-300 hover:text-brand-200">
+        <Link href={withNext('/register', next)} className="font-semibold text-brand-300 hover:text-brand-200">
           Create one
         </Link>
       </p>
@@ -41,15 +41,17 @@ export function LoginForm() {
   );
 }
 
-export function RegisterForm() {
+/** Deliberately minimal: name, email, password. Everything else can wait. */
+export function RegisterForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(register, INITIAL);
 
   return (
     <form action={action} className="space-y-4">
       <FormMessage state={state} />
+      {next && <input type="hidden" name="next" value={next} />}
 
       <div>
-        <label className="label" htmlFor="reg-name">Full name</label>
+        <label className="label" htmlFor="reg-name">Name</label>
         <input id="reg-name" name="name" className="field" required autoComplete="name" />
         <FieldError message={state.errors?.name} />
       </div>
@@ -62,23 +64,9 @@ export function RegisterForm() {
 
       <div>
         <label className="label" htmlFor="reg-password">Password</label>
-        <input
-          id="reg-password" name="password" type="password" className="field" required
-          autoComplete="new-password" minLength={8}
-        />
+        <input id="reg-password" name="password" type="password" className="field" required autoComplete="new-password" minLength={8} />
         <FieldError message={state.errors?.password} />
         <p className="mt-1 text-xs text-slate-500">At least 8 characters.</p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="label" htmlFor="reg-company">Company (optional)</label>
-          <input id="reg-company" name="company" className="field" autoComplete="organization" />
-        </div>
-        <div>
-          <label className="label" htmlFor="reg-phone">Phone (optional)</label>
-          <input id="reg-phone" name="phone" type="tel" className="field" autoComplete="tel" />
-        </div>
       </div>
 
       <button type="submit" className="btn-primary w-full" disabled={pending}>
@@ -86,8 +74,8 @@ export function RegisterForm() {
       </button>
 
       <p className="text-center text-sm text-slate-400">
-        Already registered?{' '}
-        <Link href="/login" className="font-semibold text-brand-300 hover:text-brand-200">
+        Already have an account?{' '}
+        <Link href={withNext('/login', next)} className="font-semibold text-brand-300 hover:text-brand-200">
           Sign in
         </Link>
       </p>

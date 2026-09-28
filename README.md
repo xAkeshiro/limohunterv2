@@ -30,7 +30,9 @@ npm run build && npm start
 | Admin | `admin@fleetmarketplace.com` | `demo1234` |
 | Seller | `demo@fleetmarketplace.com` | `demo1234` |
 
-Sign in as the admin and the **Admin** link appears in the header.
+Sign in as the admin and the **Admin** link appears in the header. The demo seller is on
+the Silver Club plan (2 slots) with one live listing and one expired listing, so quotas and
+renewal are visible straight away.
 
 ---
 
@@ -44,7 +46,8 @@ Sign in as the admin and the **Admin** link appears in the header.
 | Inventory — faceted filtering, keyword search, 6 sort orders, pagination | Working |
 | Listing detail — gallery, spec table, features, seller contact, similar vehicles | Working |
 | Compare — up to 4 vehicles side by side, persisted across pages | Working |
-| Sell / list a vehicle — validated submission form | Working |
+| Sell / list a vehicle — gated by account, plan and free listing slot | Working |
+| Subscriptions — 3 tiers × private and dealer, quotas and 30-day listing periods | Working |
 | Accounts — register, sign in, my listings, saved vehicles | Working |
 | Finance & insurance — content page plus a live payment calculator | Working |
 | Inquiry capture — listing, finance and general forms, stored in the database | Working |
@@ -92,6 +95,8 @@ src/
     admin.ts         admin guard + admin-only reads
     admin-actions.ts admin writes, photo uploads, auto-fill
     photos.ts        Wikimedia Commons photo search and matching
+    plans.ts         subscription catalogue
+    subscriptions.ts quotas, listing expiry, renewals, cancel/resume
     auth.ts          hashing, session signing/verification
     format.ts        currency, mileage, dates, slugs, amortisation
     types.ts         shared types and the body-style vocabulary
@@ -99,9 +104,49 @@ scripts/
   seed.ts           demo inventory              (npm run seed)
   verify.ts         34-check data-layer test    (npm run verify)
   verify-photos.ts  30-check photo matcher test (npm run verify)
+  verify-subscriptions.ts  28-check plan rules test (npm run verify)
   make-images.mjs   regenerates illustrations
   import-photos.mjs bulk-attaches real photos   (npm run import-photos)
 ```
+
+---
+
+## Subscriptions
+
+Selling requires an account and a monthly plan, matching the original LimoHunter pricing.
+
+| Plan | Subscriptions | Dealer subscriptions |
+|---|---|---|
+| Bronze Club | 1 listing · $59/mo | 5 listings · $199/mo |
+| Silver Club | 2 listings · $109/mo | 10 listings · $349/mo (popular) |
+| Gold Club | 3 listings · $149/mo | 30 listings · $899/mo |
+
+Plans live in `src/lib/plans.ts`; the rules live in `src/lib/subscriptions.ts`.
+
+**What is enforced**
+
+- **Active listing quota**: a plan caps how many of your listings are live at once. The
+  sell page and the server both check it, so a stale form cannot exceed the limit.
+- **30-day listing period**: each listing expires 30 days after it goes live and drops out
+  of search, inventory and the sitemap. Renew it from **My account**. Extending a live
+  listing needs no free slot; bringing back an expired one does.
+- Sold, removed and expired listings free their slot.
+- **Changing plan** takes effect immediately. Downgrading below your current usage keeps
+  existing listings live but blocks new ones until you are under the limit.
+- **Cancelling** keeps the plan working until the end of the paid period, then it ends;
+  you can resume before then.
+- Admins list house inventory with no plan and no expiry.
+
+**Flow:** Pricing → Sign up → create account (name, email, password) → confirm plan →
+account shows the plan and a quota meter → list a vehicle.
+
+**Payments are in demo mode.** Confirming a plan activates it without charging, and an
+active plan renews itself each period. To take real payments, connect a provider (Stripe
+Checkout and webhooks are the usual choice): create the charge before `subscribe()` in
+`subscribeToPlan`, and move the renewal in `renewDue()` behind a successful payment.
+
+The admin dashboard shows active subscriptions, plans cancelling at period end, and
+monthly recurring revenue; **Users** shows each person's plan.
 
 ---
 
@@ -201,5 +246,5 @@ that touch the database.
 
 - **Outbound email** — inquiries are stored but nothing is emailed. Add a provider in
   `saveInquiry`.
-- **Payments** — there is no checkout; the marketplace connects buyer and seller.
+- **Payments** — plans activate in demo mode without charging. See *Subscriptions* for where a payment provider plugs in.
 - **Image resizing** — uploads are stored as sent. Add `sharp` if you want thumbnails.

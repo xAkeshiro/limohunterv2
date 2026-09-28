@@ -59,7 +59,7 @@ const listing = (over: Partial<ListingView>): ListingView => ({
   price: 1, mileage: 1, passengers: 6, condition: 'Used', fuel: 'Gasoline', transmission: 'Automatic',
   drivetrain: 'AWD', exterior_color: 'Black', interior_color: 'Black', vin: null, city: 'X', state: 'CA',
   description: '', features: [], images: ['/img/suv-1.svg'], image_credits: [], seller_id: null,
-  seller_name: '', seller_phone: '', featured: 0, sold: 0, status: 'published', views: 0, created_at: '',
+  seller_name: '', seller_phone: '', featured: 0, sold: 0, status: 'published', views: 0, expires_at: null, created_at: '',
   ...over,
 });
 

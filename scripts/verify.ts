@@ -10,6 +10,7 @@ import {
   searchListings, saveInquiry, toggleFavorite, getListingBySlug, getSimilar, getFacets,
 } from '../src/lib/queries';
 import { monthlyPayment, slugify, money } from '../src/lib/format';
+import { liveSql } from '../src/lib/types';
 
 let pass = 0;
 let fail = 0;
@@ -25,7 +26,9 @@ function t(name: string, cond: boolean, extra = '') {
 }
 
 const db = getDb();
-const TOTAL = (db.prepare('SELECT COUNT(*) n FROM listings').get() as { n: number }).n;
+// Public totals exclude listings past their listing period.
+const TOTAL = (db.prepare(`SELECT COUNT(*) n FROM listings WHERE ${liveSql()}`).get() as { n: number }).n;
+const ALL = (db.prepare('SELECT COUNT(*) n FROM listings').get() as { n: number }).n;
 
 console.log('\npassword hashing');
 const hash = bcrypt.hashSync('demo1234', 10);
@@ -69,7 +72,8 @@ t('passenger filter works', searchListings({ min_passengers: 40 }).items.every((
 
 console.log('\nsql injection safety');
 t('injection string matches nothing', searchListings({ q: "'; DROP TABLE listings; --" }).total === 0);
-t('listings table intact', (db.prepare('SELECT COUNT(*) n FROM listings').get() as { n: number }).n === TOTAL);
+t('listings table intact', (db.prepare('SELECT COUNT(*) n FROM listings').get() as { n: number }).n === ALL);
+t('expired listings are hidden from search', ALL > TOTAL && searchListings({ per_page: 60 }).total === TOTAL);
 
 console.log('\ndetail pages and related vehicles');
 const first = searchListings({ per_page: 1 }).items[0];

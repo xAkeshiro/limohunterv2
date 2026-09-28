@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { adminInquiries, adminListings, adminStats } from '@/lib/admin';
+import { adminInquiries, adminListings, adminStats, adminSubscriptionStats } from '@/lib/admin';
 import { money, shortDate } from '@/lib/format';
 import StatusPill from '@/components/admin/StatusPill';
 
@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default function AdminDashboard() {
   const s = adminStats();
+  const subs = adminSubscriptionStats();
   const recent = adminListings({ per_page: 6, sort: 'newest' }).items;
   const inquiries = adminInquiries(5);
 
@@ -19,6 +20,8 @@ export default function AdminDashboard() {
     { label: 'Registered users', value: s.users, href: '/admin/users' },
     { label: 'Inquiries', value: s.inquiries, href: '/admin/inquiries' },
     { label: 'Total listing views', value: s.views, href: '/admin/listings?sort=views_desc' },
+    { label: 'Active subscriptions', value: subs.active, href: '/admin/users' },
+    { label: 'Cancelling at period end', value: subs.cancelling, href: '/admin/users' },
   ];
 
   return (
@@ -35,8 +38,17 @@ export default function AdminDashboard() {
       </dl>
 
       <div className="card mt-4 p-5">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Published inventory value</p>
-        <p className="mt-1.5 text-3xl font-bold text-brand-300">{money(s.value)}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Published inventory value</p>
+            <p className="mt-1.5 text-3xl font-bold text-brand-300">{money(s.value)}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Monthly recurring revenue</p>
+            <p className="mt-1.5 text-3xl font-bold text-brand-300">{money(subs.mrr)}</p>
+            <p className="mt-1 text-xs text-slate-500">From renewing plans. Demo mode — nothing is charged.</p>
+          </div>
+        </div>
       </div>
 
       <section className="mt-6">

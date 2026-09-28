@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS listings (
   sold           INTEGER NOT NULL DEFAULT 0,
   status         TEXT NOT NULL DEFAULT 'published',
   views          INTEGER NOT NULL DEFAULT 0,
+  expires_at     TEXT,
   created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -220,6 +221,19 @@ CREATE TABLE IF NOT EXISTS inquiries (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id            TEXT NOT NULL,
+  status             TEXT NOT NULL DEFAULT 'active',
+  started_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  current_period_end TEXT NOT NULL,
+  cancelled_at       TEXT,
+  ended_at           TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id, status);
+
 CREATE TABLE IF NOT EXISTS favorites (
   user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -233,6 +247,10 @@ function migrate(db: DbHandle): void {
   const columns = db.prepare('PRAGMA table_info(listings)').all<{ name: string }>();
   if (!columns.some((c) => c.name === 'image_credits')) {
     db.exec("ALTER TABLE listings ADD COLUMN image_credits TEXT NOT NULL DEFAULT '[]'");
+  }
+  // NULL means the listing never expires (house inventory, admin-created).
+  if (!columns.some((c) => c.name === 'expires_at')) {
+    db.exec('ALTER TABLE listings ADD COLUMN expires_at TEXT');
   }
 }
 
@@ -249,6 +267,7 @@ export function getDb(): DbHandle {
   db.pragma(ephemeral() ? 'journal_mode = MEMORY' : 'journal_mode = WAL');
   db.exec(SCHEMA);
   migrate(db);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_listings_seller ON listings(seller_id, status, expires_at)');
 
   instance = db;
   return db;

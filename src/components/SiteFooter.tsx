@@ -17,6 +17,7 @@ const COLUMNS = [
     title: 'Sell',
     links: [
       { href: '/sell', label: 'List a vehicle' },
+      { href: '/subscriptions', label: 'Pricing & plans' },
       { href: '/account', label: 'My listings' },
       { href: '/finance', label: 'Finance & insurance' },
     ],

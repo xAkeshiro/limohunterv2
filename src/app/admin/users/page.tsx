@@ -3,6 +3,8 @@ import { adminUsers, requireAdmin } from '@/lib/admin';
 import { adminSetRole } from '@/lib/admin-actions';
 import { shortDate } from '@/lib/format';
 import RoleSelect from '@/components/admin/RoleSelect';
+import { currentSubscription } from '@/lib/subscriptions';
+import { planLabel } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Users' };
@@ -25,6 +27,7 @@ export default async function AdminUsersPage() {
               <th scope="col" className="py-3 pr-4">Name</th>
               <th scope="col" className="py-3 pr-4">Email</th>
               <th scope="col" className="py-3 pr-4">Company</th>
+              <th scope="col" className="py-3 pr-4">Plan</th>
               <th scope="col" className="py-3 pr-4">Listings</th>
               <th scope="col" className="py-3 pr-4">Joined</th>
               <th scope="col" className="py-3">Role</th>
@@ -36,6 +39,18 @@ export default async function AdminUsersPage() {
                 <td className="py-3 pr-4 font-medium text-slate-100">{u.name}</td>
                 <td className="py-3 pr-4 text-slate-300">{u.email}</td>
                 <td className="py-3 pr-4 text-slate-400">{u.company ?? '—'}</td>
+                <td className="py-3 pr-4 text-slate-300">
+                  {(() => {
+                    const sub = currentSubscription(u.id);
+                    if (!sub) return <span className="text-slate-500">—</span>;
+                    return (
+                      <>
+                        {planLabel(sub.plan)}
+                        {sub.status === 'cancelled' && <span className="ml-1.5 text-xs text-amber-300">cancelling</span>}
+                      </>
+                    );
+                  })()}
+                </td>
                 <td className="py-3 pr-4 text-slate-300">{u.listing_count}</td>
                 <td className="py-3 pr-4 text-xs text-slate-400">{shortDate(u.created_at)}</td>
                 <td className="py-3">

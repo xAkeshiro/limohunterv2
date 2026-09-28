@@ -9,6 +9,7 @@ import Logo from './Logo';
 const NAV = [
   { href: '/inventory', label: 'Inventory' },
   { href: '/sell', label: 'Sell' },
+  { href: '/subscriptions', label: 'Pricing' },
   { href: '/finance', label: 'Finance' },
   { href: '/compare', label: 'Compare' },
   { href: '/about', label: 'About' },
@@ -36,7 +37,7 @@ export default function SiteHeader({
           <Logo />
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+        <nav className="hidden items-center gap-1 xl:flex" aria-label="Main">
           {NAV.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -54,23 +55,26 @@ export default function SiteHeader({
         </nav>
 
         <div className="flex items-center gap-2">
-          <a
-            href="tel:+12533147568"
-            className="hidden whitespace-nowrap text-sm font-semibold text-slate-200 hover:text-brand-200 xl:block"
-          >
-            (253) 314-7568
-          </a>
+          {/* The sales line is for visitors; signed-in users need the room for account links. */}
+          {!userName && (
+            <a
+              href="tel:+12533147568"
+              className="hidden whitespace-nowrap text-sm font-semibold text-slate-200 hover:text-brand-200 2xl:block"
+            >
+              (253) 314-7568
+            </a>
+          )}
           {isAdmin && (
             <Link
               href="/admin"
-              className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-brand-300 hover:text-brand-200 lg:inline-flex"
+              className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold text-brand-300 hover:text-brand-200 xl:inline-flex"
             >
               Admin
             </Link>
           )}
           {userName ? (
-            <Link href="/account" className="btn-ghost hidden whitespace-nowrap sm:inline-flex">
-              {userName.split(' ')[0]}
+            <Link href="/account" className="btn-ghost hidden max-w-[9rem] sm:inline-flex" title="My account">
+              <span className="truncate">{userName.split(' ')[0]}</span>
             </Link>
           ) : (
             <Link href="/login" className="btn-ghost hidden whitespace-nowrap sm:inline-flex">
@@ -84,7 +88,7 @@ export default function SiteHeader({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="btn-ghost px-3 lg:hidden"
+            className="btn-ghost px-3 xl:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label="Toggle navigation"
@@ -97,7 +101,7 @@ export default function SiteHeader({
       </div>
 
       {open && (
-        <nav id="mobile-nav" className="border-t border-ink-line bg-ink lg:hidden" aria-label="Mobile">
+        <nav id="mobile-nav" className="border-t border-ink-line bg-ink xl:hidden" aria-label="Mobile">
           <div className="wrap flex flex-col py-2">
             {NAV.map((item) => (
               <Link

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getDb } from './db';
 import { currentUser } from './auth';
 import { parseListing, type Listing, type ListingView, type User } from './types';
+import { getPlan } from './plans';
 
 /**
  * Gate for every /admin route. Non-admins are sent away rather than shown a
@@ -152,4 +153,20 @@ export function adminStatusOptions(): string[] {
     .prepare('SELECT DISTINCT status FROM listings ORDER BY status')
     .all() as { status: string }[];
   return rows.map((r) => r.status);
+}
+
+/** Subscriptions that are still in their paid period, with revenue from renewing ones. */
+export function adminSubscriptionStats() {
+  const rows = getDb()
+    .prepare(
+      `SELECT plan_id, status FROM subscriptions
+       WHERE status IN ('active', 'cancelled') AND current_period_end > datetime('now')`,
+    )
+    .all() as { plan_id: string; status: string }[];
+
+  let mrr = 0;
+  for (const r of rows) {
+    if (r.status === 'active') mrr += getPlan(r.plan_id)?.price ?? 0;
+  }
+  return { active: rows.length, cancelling: rows.filter((r) => r.status === 'cancelled').length, mrr };
 }
