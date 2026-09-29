@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState } from 'react';
+import { keepValues } from '@/components/keepValues';
 import { login, register, type FormState } from '@/lib/actions';
 import FormMessage, { FieldError } from './FormMessage';
 
@@ -13,7 +14,7 @@ export function LoginForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(login, INITIAL);
 
   return (
-    <form action={action} className="space-y-4">
+    <form onSubmit={keepValues(action)} className="space-y-4">
       <FormMessage state={state} />
       {next && <input type="hidden" name="next" value={next} />}
 
@@ -46,7 +47,7 @@ export function RegisterForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(register, INITIAL);
 
   return (
-    <form action={action} className="space-y-4">
+    <form onSubmit={keepValues(action)} className="space-y-4">
       <FormMessage state={state} />
       {next && <input type="hidden" name="next" value={next} />}
 

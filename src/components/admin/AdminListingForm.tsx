@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { keepValues } from '@/components/keepValues';
 import Link from 'next/link';
 import { adminCreateListing, adminUpdateListing } from '@/lib/admin-actions';
 import type { FormState } from '@/lib/actions';
@@ -8,6 +9,8 @@ import type { ImageCredit, ListingView } from '@/lib/types';
 import { BODY_STYLES, isPlaceholder } from '@/lib/types';
 import type { Photo } from '@/lib/photos';
 import PhotoFinder from './PhotoFinder';
+import PhotoUploader from '@/components/PhotoUploader';
+import type { UploadMode } from '@/lib/storage';
 import FormMessage, { FieldError } from '@/components/FormMessage';
 
 const INITIAL: FormState = { ok: false, message: '' };
@@ -19,9 +22,11 @@ const TRANSMISSIONS = ['Automatic', 'Manual'];
 export default function AdminListingForm({
   listing,
   defaultPhotoQuery = '',
+  uploadMode,
 }: {
   listing?: ListingView;
   defaultPhotoQuery?: string;
+  uploadMode: UploadMode;
 }) {
   const editing = Boolean(listing);
   const [state, action, pending] = useActionState(
@@ -56,7 +61,7 @@ export default function AdminListingForm({
   const err = (k: string) => state.errors?.[k];
 
   return (
-    <form action={action} className="space-y-6">
+    <form onSubmit={keepValues(action)} className="space-y-6">
       <FormMessage state={state} />
       {editing && <input type="hidden" name="id" value={listing!.id} />}
 
@@ -171,30 +176,14 @@ export default function AdminListingForm({
       <fieldset className="card p-5">
         <legend className="px-2 text-sm font-semibold uppercase tracking-wide text-brand-300">Photos</legend>
 
-        {images.length > 0 && (
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {images.map((src) => (
-              <div key={src} className="relative">
-                <input type="hidden" name="keep_image" value={src} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt="" className="aspect-[16/10] w-full rounded-lg border border-ink-line object-cover" />
-                {credits[src] && (
-                  <p className="mt-1 truncate text-[11px] text-slate-500" title={credits[src].author}>
-                    {credits[src].author} · {credits[src].license}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setImages((prev) => prev.filter((p) => p !== src))}
-                  className="absolute right-1.5 top-1.5 rounded-md bg-ink/90 px-2 py-1 text-[11px] font-semibold text-red-300 hover:text-red-200"
-                  aria-label="Remove this photo"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="mt-3">
+          <PhotoUploader
+            images={images}
+            onChange={setImages}
+            mode={uploadMode}
+            captions={Object.fromEntries(Object.values(credits).map((c) => [c.src, `${c.author} · ${c.license}`]))}
+          />
+        </div>
 
         <input type="hidden" name="image_credits" value={JSON.stringify(creditList)} />
 
@@ -220,17 +209,6 @@ export default function AdminListingForm({
           </p>
         </div>
 
-        <div className="mt-4">
-          <label className="label" htmlFor="photos">Upload photos</label>
-          <input
-            id="photos" name="photos" type="file" multiple
-            accept="image/jpeg,image/png,image/webp,image/avif"
-            className="field file:mr-3 file:rounded file:border-0 file:bg-brand-300 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink"
-          />
-          <p className="mt-1.5 text-xs text-slate-500">
-            JPG, PNG, WebP or AVIF, up to 8&nbsp;MB each. Added to the photos kept above.
-          </p>
-        </div>
       </fieldset>
 
       <fieldset className="card p-5">

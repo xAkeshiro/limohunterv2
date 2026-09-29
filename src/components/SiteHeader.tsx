@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Logo from './Logo';
+import ProfileMenu from './ProfileMenu';
 
 /** Short labels keep the desktop bar on one line; the drawer shows the same set. */
 const NAV = [
@@ -73,9 +74,7 @@ export default function SiteHeader({
             </Link>
           )}
           {userName ? (
-            <Link href="/account" className="btn-ghost hidden max-w-[9rem] sm:inline-flex" title="My account">
-              <span className="truncate">{userName.split(' ')[0]}</span>
-            </Link>
+            <ProfileMenu userName={userName} isAdmin={isAdmin} />
           ) : (
             <Link href="/login" className="btn-ghost hidden whitespace-nowrap sm:inline-flex">
               Sign in
@@ -112,6 +111,17 @@ export default function SiteHeader({
                 {item.label}
               </Link>
             ))}
+            {userName && (
+              <>
+                <Link href="/account#listings" className="rounded-lg px-2 py-3 text-sm font-medium text-slate-200 hover:text-brand-200">My listings</Link>
+                <Link href="/account/settings" className="rounded-lg px-2 py-3 text-sm font-medium text-slate-200 hover:text-brand-200">Profile &amp; settings</Link>
+              </>
+            )}
+            {isAdmin && (
+              <Link href="/admin/listings" className="rounded-lg px-2 py-3 text-sm font-semibold text-brand-300">
+                Manage all listings
+              </Link>
+            )}
             {isAdmin && (
               <Link href="/admin" className="rounded-lg px-2 py-3 text-sm font-semibold text-brand-300">
                 Admin

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import AdminListingForm from '@/components/admin/AdminListingForm';
+import { uploadMode } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Add listing' };
@@ -12,7 +13,7 @@ export default function NewListingPage() {
         Create a listing directly. It publishes immediately and appears in the public inventory.
       </p>
       <div className="mt-6">
-        <AdminListingForm />
+        <AdminListingForm uploadMode={uploadMode()} />
       </div>
     </div>
   );

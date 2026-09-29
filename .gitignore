@@ -7,7 +7,6 @@ build/
 *.log
 .DS_Store
 next-env.d.ts
-public/uploads/*
-!public/uploads/.gitkeep
+data/uploads/
 tsconfig.tsbuildinfo
 data/pglite/

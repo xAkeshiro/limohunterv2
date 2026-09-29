@@ -4,6 +4,7 @@ import ListingForm from '@/components/ListingForm';
 import { currentUser } from '@/lib/auth';
 import { LISTING_DAYS, planLabel } from '@/lib/plans';
 import { quotaFor } from '@/lib/subscriptions';
+import { uploadMode } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export default async function SellPage() {
             : `This uses 1 of your ${quota!.limit} listing slots (${quota!.remaining} free) and stays live for ${LISTING_DAYS} days. You can renew it from your account.`}
         </p>
         <div className="max-w-3xl">
-          <ListingForm sellerName={user.company ?? user.name} sellerPhone={user.phone ?? ''} />
+          <ListingForm uploadMode={uploadMode()} sellerName={user.company ?? user.name} sellerPhone={user.phone ?? ''} />
         </div>
       </>
     );

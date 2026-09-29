@@ -17,7 +17,11 @@ export default function ListingCard({ listing }: { listing: ListingView }) {
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />
-          {listing.featured === 1 && (
+          {listing.sold === 1 ? (
+            <span className="absolute left-3 top-3 rounded-md bg-red-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+              Sold
+            </span>
+          ) : listing.featured === 1 && (
             <span className="absolute left-3 top-3 rounded-md bg-brand-300 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-ink">
               Featured
             </span>

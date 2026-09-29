@@ -10,6 +10,7 @@ import { daysUntil, quotaFor } from '@/lib/subscriptions';
 import { withPhotosAll } from '@/lib/photos';
 import ListingCard from '@/components/ListingCard';
 import SubmitButton from '@/components/SubmitButton';
+import AccountNav from '@/components/AccountNav';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'My account' };
@@ -69,6 +70,8 @@ export default async function AccountPage({
           </form>
         </div>
       </header>
+
+      <AccountNav active="overview" isAdmin={isAdmin} />
 
       {subscribed && (
         <p role="status" className="mb-6 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
@@ -161,7 +164,7 @@ export default async function AccountPage({
       </section>
 
       {/* Listings */}
-      <section className="mt-12">
+      <section id="listings" className="mt-12 scroll-mt-24">
         <h2 className="text-xl">My listings ({listings.length})</h2>
 
         {listings.length === 0 ? (
@@ -197,6 +200,9 @@ export default async function AccountPage({
                       <td className="py-3 pr-4 text-slate-300">{l.views}</td>
                       <td className="py-3">
                         <div className="flex items-center justify-end gap-3">
+                          <Link href={`/account/listings/${l.id}/edit`} className="text-xs font-semibold text-brand-300 hover:text-brand-200">
+                            Edit
+                          </Link>
                           {renewable && (
                             <form action={renewMyListing}>
                               <input type="hidden" name="id" value={l.id} />

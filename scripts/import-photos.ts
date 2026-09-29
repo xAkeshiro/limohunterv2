@@ -9,7 +9,7 @@
  *       { "2019-cadillac-xts-stretch-limousine-1": ["https://…/a.jpg", "./b.jpg"] }
  *     Remote URLs are downloaded unless --link, which stores them as-is.
  *
- * Downloaded and local files are copied into public/uploads. Pass --replace
+ * Downloaded and local files are copied into data/uploads. Pass --replace
  * to discard existing photos instead of appending. Uses the same database as
  * the app, so set DATABASE_URL to update a hosted one.
  */
@@ -30,7 +30,7 @@ const MANIFEST = flag('manifest');
 const REPLACE = has('replace');
 const LINK_ONLY = has('link');
 const ROOT = process.cwd();
-const UPLOADS = path.join(ROOT, 'public', 'uploads');
+const UPLOADS = process.env.UPLOAD_DIR || path.join(ROOT, 'data', 'uploads');
 const ALLOWED = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
 
 function store(buffer: Buffer, ext: string): string {

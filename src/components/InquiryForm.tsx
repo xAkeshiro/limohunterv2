@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { keepValues } from '@/components/keepValues';
 import { submitInquiry, type FormState } from '@/lib/actions';
 import FormMessage, { FieldError } from './FormMessage';
 
@@ -21,7 +22,7 @@ export default function InquiryForm({ listingId, kind = 'listing', title, defaul
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <form onSubmit={keepValues(action)} className="space-y-3">
       {title && <h3 className="text-base font-semibold text-white">{title}</h3>}
       <FormMessage state={state} />
 

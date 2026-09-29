@@ -16,7 +16,7 @@ const EXTENSION: Record<string, string> = {
   'image/avif': 'avif',
 };
 
-export const MAX_BYTES = 8 * 1024 * 1024;
+export const MAX_BYTES = 10 * 1024 * 1024;
 
 /** Vercel Blob is used whenever its token is present; otherwise local disk. */
 export function usingBlob(): boolean {
@@ -43,8 +43,17 @@ async function storeOnBlob(file: File): Promise<string> {
   return blob.url;
 }
 
+/**
+ * Where uploads live without Blob. Kept out of public/ because `next start`
+ * only serves files that existed there at build time; src/app/uploads serves
+ * this folder at /uploads/<name> instead.
+ */
+export function localUploadDir(): string {
+  return process.env.UPLOAD_DIR || path.join(process.cwd(), 'data', 'uploads');
+}
+
 async function storeOnDisk(file: File): Promise<string> {
-  const dir = path.join(process.cwd(), 'public', 'uploads');
+  const dir = localUploadDir();
   await fs.mkdir(dir, { recursive: true });
 
   const name = filename(file.type);
@@ -71,7 +80,7 @@ export async function storeImages(files: File[]): Promise<StoreResult> {
     }
     if (file.size > MAX_BYTES) {
       skipped += 1;
-      errors.push(`${file.name || 'file'}: larger than 8 MB`);
+      errors.push(`${file.name || 'file'}: larger than 10 MB`);
       continue;
     }
 
@@ -93,4 +102,39 @@ export function parseImageUrls(raw: string): string[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .filter((line) => /^https?:\/\//i.test(line) || line.startsWith('/'));
+}
+
+/* ------------------------------------------------------------ direct uploads */
+
+/**
+ * How the browser should upload photos:
+ * - blob: straight to Vercel Blob (needed on Vercel, where a request body is
+ *   capped at ~4.5 MB and a normal phone photo can exceed it)
+ * - local: to /api/uploads/local, which writes to data/uploads (local use)
+ * - unavailable: deployed without a Blob token, so uploads cannot persist
+ */
+export type UploadMode = 'blob' | 'local' | 'unavailable';
+
+export function uploadMode(): UploadMode {
+  if (usingBlob()) return 'blob';
+  return process.env.VERCEL ? 'unavailable' : 'local';
+}
+
+/** Photos per listing. */
+export const MAX_PHOTOS = 20;
+
+/** Per-photo size limit for direct uploads. */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const BLOB_URL = /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\/[\w./-]+$/i;
+const LOCAL_UPLOAD = /^\/uploads\/[\w.-]+$/;
+const BUNDLED = /^\/img\/[\w.-]+$/;
+
+/**
+ * Whether a photo link submitted by a seller may be stored: our own Blob
+ * store, our local uploads, or the bundled drawings. Anything else is dropped,
+ * so a crafted form cannot attach images hosted elsewhere.
+ */
+export function isOwnImage(src: string): boolean {
+  return BLOB_URL.test(src) || LOCAL_UPLOAD.test(src) || BUNDLED.test(src);
 }

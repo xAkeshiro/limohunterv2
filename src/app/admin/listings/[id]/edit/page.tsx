@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { adminListingById } from '@/lib/admin';
 import { adminDeleteListing } from '@/lib/admin-actions';
 import AdminListingForm from '@/components/admin/AdminListingForm';
+import { uploadMode } from '@/lib/storage';
 import ConfirmDelete from '@/components/admin/ConfirmDelete';
 import { shortDate } from '@/lib/format';
 import { queryPlan } from '@/lib/photos';
@@ -32,7 +33,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mt-6">
-        <AdminListingForm listing={listing} defaultPhotoQuery={queryPlan(listing)[0]?.q ?? ''} />
+        <AdminListingForm listing={listing} defaultPhotoQuery={queryPlan(listing)[0]?.q ?? ''} uploadMode={uploadMode()} />
       </div>
     </div>
   );

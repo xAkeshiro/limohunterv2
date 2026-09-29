@@ -168,6 +168,11 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
                   Featured
                 </span>
               )}
+              {listing.sold === 1 && (
+                <span className="rounded-md bg-red-500 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+                  Sold
+                </span>
+              )}
             </div>
 
             <h1 className="mt-3 text-2xl leading-snug">{listing.title}</h1>

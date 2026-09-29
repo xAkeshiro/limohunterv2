@@ -166,6 +166,16 @@ async function main() {
   catch { duplicate = true; }
   t('database rejects a duplicate email', duplicate);
 
+  console.log('\nphoto links a seller may attach');
+  const { isOwnImage } = await import('../src/lib/storage');
+  t('Vercel Blob upload accepted', isOwnImage('https://abc123.public.blob.vercel-storage.com/vehicles/xts-a1B2c3.jpg'));
+  t('local upload accepted', isOwnImage('/uploads/1790000000-abcdef123456.jpg'));
+  t('bundled drawing accepted', isOwnImage('/img/sedan-1.svg'));
+  t('someone else\'s website rejected', !isOwnImage('https://evil.example/photo.jpg'));
+  t('look-alike blob host rejected', !isOwnImage('https://abc.public.blob.vercel-storage.com.evil.example/x.jpg'));
+  t('plain http rejected', !isOwnImage('http://abc.public.blob.vercel-storage.com/x.jpg'));
+  t('path tricks rejected', !isOwnImage('/uploads/../../etc/passwd') && !isOwnImage('javascript:alert(1)'));
+
   console.log('\nformatting helpers');
   t('monthly payment correct', Math.round(monthlyPayment(50000, 8.5, 60)) === 1026, `got ${Math.round(monthlyPayment(50000, 8.5, 60))}`);
   t('zero interest divides evenly', monthlyPayment(12000, 0, 12) === 1000);

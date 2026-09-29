@@ -10,6 +10,8 @@ import { slugify } from './format';
 import type { User } from './types';
 import { getPlan, planLabel } from './plans';
 import { safeNextPath } from './next-path';
+import { MAX_PHOTOS, isOwnImage } from './storage';
+import { parseListing, type ImageCredit, type Listing } from './types';
 import {
   LISTING_EXPIRY_SQL, cancelSubscription, quotaFor, renewListing, resumeSubscription, subscribe,
 } from './subscriptions';
@@ -213,8 +215,13 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
   const db = await getDb();
   const slug = await uniqueSlug(slugify(`${v.year}-${v.make}-${v.model}-${v.body_style}`));
 
+  const uploaded = collectImages(data);
+  if (uploaded.length === 0 && !isAdmin) {
+    return { ok: false, message: 'Add at least one photo of the vehicle.', errors: { images: 'At least one photo is required.' } };
+  }
+  // Admins may publish house inventory without photos; drawings stand in.
   const key = IMAGE_KEY[v.body_style] ?? 'sedan';
-  const images = [1, 2, 3, 4].map((i) => `/img/${key}-${i}.svg`);
+  const images = uploaded.length > 0 ? uploaded : [1, 2, 3, 4].map((i) => `/img/${key}-${i}.svg`);
   const features = (v.features ?? '')
     .split('\n')
     .map((line) => line.trim())
@@ -331,4 +338,156 @@ async function uniqueSlug(base: string): Promise<string> {
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
   return slug;
+}
+
+/* ------------------------------------------------------------------ photos */
+
+/**
+ * Photo links submitted with a listing form, in display order. Only links to
+ * our own storage survive (plus any the listing already had), so a crafted
+ * form cannot attach images hosted elsewhere.
+ */
+function collectImages(data: FormData, alreadyOnListing: string[] = []): string[] {
+  const kept = new Set(alreadyOnListing);
+  const images = data
+    .getAll('keep_image')
+    .map((v) => String(v).trim())
+    .filter((src) => src && (isOwnImage(src) || kept.has(src)));
+  return [...new Set(images)].slice(0, MAX_PHOTOS);
+}
+
+/** A seller editing their own listing: details, photos and sold status. */
+export async function updateMyListing(_prev: FormState, data: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) return { ok: false, message: 'Sign in to edit your listing.' };
+
+  const id = Number(data.get('id'));
+  const db = await getDb();
+  const row = Number.isInteger(id)
+    ? await db.get<Listing>('SELECT * FROM listings WHERE id = ? AND seller_id = ?', [id, user.id])
+    : undefined;
+  // Same answer for "missing" and "not yours", so ids cannot be probed.
+  if (!row) return { ok: false, message: 'That listing could not be found in your account.' };
+  const existing = parseListing(row);
+
+  const parsed = listingSchema.safeParse(Object.fromEntries(data.entries()));
+  if (!parsed.success) {
+    return { ok: false, message: 'Please correct the fields below.', errors: fieldErrors(parsed.error) };
+  }
+
+  const images = collectImages(data, existing.images);
+  if (images.length === 0) {
+    return { ok: false, message: 'Keep at least one photo of the vehicle.', errors: { images: 'At least one photo is required.' } };
+  }
+  const credits: ImageCredit[] = existing.image_credits.filter((c) => images.includes(c.src));
+
+  const v = parsed.data;
+  await db.run(
+    `UPDATE listings SET
+       title=@title, body_style=@body_style, make=@make, model=@model, year=@year,
+       price=@price, mileage=@mileage, passengers=@passengers, condition=@condition,
+       fuel=@fuel, exterior_color=@exterior_color, interior_color=@interior_color,
+       city=@city, state=@state, description=@description, features=@features,
+       seller_name=@seller_name, seller_phone=@seller_phone,
+       images=@images, image_credits=@image_credits, sold=@sold
+     WHERE id=@id AND seller_id=@seller_id`,
+    {
+      ...v,
+      id,
+      seller_id: user.id,
+      state: v.state.toUpperCase(),
+      features: JSON.stringify((v.features ?? '').split('\n').map((l) => l.trim()).filter(Boolean)),
+      images: JSON.stringify(images),
+      image_credits: JSON.stringify(credits),
+      sold: data.get('sold') ? 1 : 0,
+    },
+  );
+
+  revalidatePath('/account');
+  revalidatePath('/inventory');
+  revalidatePath(`/listing/${existing.slug}`);
+  return { ok: true, message: 'Listing saved.' };
+}
+
+/* --------------------------------------------------------------- settings */
+
+const profileSchema = z.object({
+  name: z.string().trim().min(2, 'Please enter your name').max(80, 'Keep it under 80 characters'),
+  company: z.string().trim().max(120, 'Keep it under 120 characters').optional(),
+  phone: z.string().trim().max(40, 'Keep it under 40 characters').optional(),
+});
+
+export async function updateProfile(_prev: FormState, data: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) return { ok: false, message: 'Please sign in again.' };
+
+  const parsed = profileSchema.safeParse({
+    name: data.get('name'),
+    company: data.get('company') ?? undefined,
+    phone: data.get('phone') ?? undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: 'Please correct the fields below.', errors: fieldErrors(parsed.error) };
+  }
+
+  const db = await getDb();
+  await db.run('UPDATE users SET name = ?, company = ?, phone = ? WHERE id = ?', [
+    parsed.data.name,
+    parsed.data.company || null,
+    parsed.data.phone || null,
+    user.id,
+  ]);
+  // The header shows the name on every page.
+  revalidatePath('/', 'layout');
+  return { ok: true, message: 'Profile saved.' };
+}
+
+/** Both sensitive changes need the current password, so an unattended session cannot take the account. */
+async function confirmPassword(userId: number, password: string): Promise<boolean> {
+  const db = await getDb();
+  const row = await db.get<{ password_hash: string }>('SELECT password_hash FROM users WHERE id = ?', [userId]);
+  return Boolean(row) && (await checkPassword(password, row!.password_hash));
+}
+
+export async function changeEmail(_prev: FormState, data: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) return { ok: false, message: 'Please sign in again.' };
+
+  const email = z.string().trim().toLowerCase().email().safeParse(data.get('email'));
+  if (!email.success) return { ok: false, message: 'Enter a valid email address.', errors: { email: 'Enter a valid email address' } };
+  if (email.data === user.email) return { ok: false, message: 'That is already your email address.' };
+
+  if (!(await confirmPassword(user.id, String(data.get('current_password') ?? '')))) {
+    return { ok: false, message: 'Your current password is incorrect.', errors: { current_password: 'Incorrect password' } };
+  }
+
+  const db = await getDb();
+  try {
+    await db.run('UPDATE users SET email = ? WHERE id = ?', [email.data, user.id]);
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') {
+      return { ok: false, message: 'That email is already used by another account.', errors: { email: 'Already in use' } };
+    }
+    throw err;
+  }
+  revalidatePath('/account/settings');
+  return { ok: true, message: `Email changed to ${email.data}. Use it next time you sign in.` };
+}
+
+export async function changePassword(_prev: FormState, data: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) return { ok: false, message: 'Please sign in again.' };
+
+  const next = String(data.get('new_password') ?? '');
+  if (next.length < 8) return { ok: false, message: 'Use at least 8 characters.', errors: { new_password: 'At least 8 characters' } };
+  if (next !== String(data.get('confirm_password') ?? '')) {
+    return { ok: false, message: 'The new passwords do not match.', errors: { confirm_password: 'Does not match' } };
+  }
+  if (!(await confirmPassword(user.id, String(data.get('current_password') ?? '')))) {
+    return { ok: false, message: 'Your current password is incorrect.', errors: { current_password: 'Incorrect password' } };
+  }
+
+  const db = await getDb();
+  await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [await hashPassword(next), user.id]);
+  return { ok: true, message: 'Password changed.' };
 }
