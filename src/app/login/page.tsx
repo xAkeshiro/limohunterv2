@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { LoginForm } from '@/components/AuthForms';
 import { currentUser } from '@/lib/auth';
 import { safeNextPath } from '@/lib/next-path';
+import { demoAccountsEnabled } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Sign in' };
@@ -28,13 +29,16 @@ export default async function LoginPage({
           <LoginForm next={next} />
         </div>
 
-        <p className="mt-5 rounded-lg border border-ink-line bg-ink-soft px-4 py-3 text-center text-xs text-slate-400">
-          Seller demo: <span className="font-mono text-slate-200">demo@fleetmarketplace.com</span>
-          <br />
-          Admin demo: <span className="font-mono text-slate-200">admin@fleetmarketplace.com</span>
-          <br />
-          Password for both: <span className="font-mono text-slate-200">demo1234</span>
-        </p>
+        {/* Demo logins only exist where sample accounts were seeded; never on a real database. */}
+        {demoAccountsEnabled() && (
+          <p className="mt-5 rounded-lg border border-ink-line bg-ink-soft px-4 py-3 text-center text-xs text-slate-400">
+            Seller demo: <span className="font-mono text-slate-200">demo@fleetmarketplace.com</span>
+            <br />
+            Admin demo: <span className="font-mono text-slate-200">admin@fleetmarketplace.com</span>
+            <br />
+            Password for both: <span className="font-mono text-slate-200">demo1234</span>
+          </p>
+        )}
       </div>
     </div>
   );

@@ -10,8 +10,17 @@ export function miles(value: number): string {
   return `${new Intl.NumberFormat('en-US').format(value)} mi`;
 }
 
+/**
+ * Parses stored timestamps: ISO strings from Postgres, or the older
+ * "YYYY-MM-DD HH:MM:SS" UTC form, which carries no zone marker.
+ */
+export function parseTimestamp(value: string): Date {
+  const hasZone = /[zZ]$|[+-]\d\d:?\d\d$/.test(value);
+  return new Date(hasZone ? value : `${value.replace(' ', 'T')}Z`);
+}
+
 export function shortDate(iso: string): string {
-  const d = new Date(iso.replace(' ', 'T') + 'Z');
+  const d = parseTimestamp(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }

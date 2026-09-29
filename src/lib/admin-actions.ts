@@ -93,10 +93,8 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
     return { ok: false, message: 'Please correct the fields below.', errors: fieldErrors(parsed.error) };
   }
 
-  const db = getDb();
-  const existing = db.prepare('SELECT images FROM listings WHERE id = ?').get(id) as
-    | { images: string }
-    | undefined;
+  const db = await getDb();
+  const existing = await db.get<{ images: string }>('SELECT images FROM listings WHERE id = ?', [id]);
   if (!existing) return { ok: false, message: 'That listing no longer exists.' };
 
   // Existing photos the editor kept, plus anything newly uploaded.
@@ -108,7 +106,7 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
   const credits = creditsFor(images, data.get('image_credits'));
 
   const v = parsed.data;
-  db.prepare(
+  await db.run(
     `UPDATE listings SET
        title=@title, body_style=@body_style, make=@make, model=@model, year=@year,
        price=@price, mileage=@mileage, passengers=@passengers, condition=@condition,
@@ -118,7 +116,7 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
        images=@images, image_credits=@image_credits, seller_name=@seller_name,
        seller_phone=@seller_phone, status=@status, featured=@featured, sold=@sold
      WHERE id=@id`,
-  ).run({
+    {
     ...v,
     id,
     vin: v.vin || null,
@@ -128,7 +126,8 @@ export async function adminUpdateListing(_prev: FormState, data: FormData): Prom
     ),
     images: JSON.stringify(images),
     image_credits: JSON.stringify(credits),
-  });
+    },
+  );
 
   revalidatePath('/admin/listings');
   revalidatePath('/inventory');
@@ -143,7 +142,7 @@ export async function adminDeleteListing(data: FormData): Promise<void> {
   const id = Number(data.get('id'));
   if (!Number.isInteger(id)) return;
 
-  getDb().prepare('DELETE FROM listings WHERE id = ?').run(id);
+  await (await getDb()).run('DELETE FROM listings WHERE id = ?', [id]);
 
   revalidatePath('/admin/listings');
   revalidatePath('/inventory');
@@ -160,7 +159,8 @@ export async function adminToggleFlag(data: FormData): Promise<void> {
   const field = String(data.get('field'));
   if (!Number.isInteger(id) || !['featured', 'sold'].includes(field)) return;
 
-  getDb().prepare(`UPDATE listings SET ${field} = CASE ${field} WHEN 1 THEN 0 ELSE 1 END WHERE id = ?`).run(id);
+  // field is checked against a fixed list above, so it is safe to interpolate.
+  await (await getDb()).run(`UPDATE listings SET ${field} = CASE ${field} WHEN 1 THEN 0 ELSE 1 END WHERE id = ?`, [id]);
 
   revalidatePath('/admin/listings');
   revalidatePath('/inventory');
@@ -174,7 +174,7 @@ export async function adminSetStatus(data: FormData): Promise<void> {
   const status = String(data.get('status'));
   if (!Number.isInteger(id) || !['published', 'draft', 'archived'].includes(status)) return;
 
-  getDb().prepare('UPDATE listings SET status = ? WHERE id = ?').run(status, id);
+  await (await getDb()).run('UPDATE listings SET status = ? WHERE id = ?', [status, id]);
 
   revalidatePath('/admin/listings');
   revalidatePath('/inventory');
@@ -186,7 +186,7 @@ export async function adminDeleteInquiry(data: FormData): Promise<void> {
   const id = Number(data.get('id'));
   if (!Number.isInteger(id)) return;
 
-  getDb().prepare('DELETE FROM inquiries WHERE id = ?').run(id);
+  await (await getDb()).run('DELETE FROM inquiries WHERE id = ?', [id]);
   revalidatePath('/admin/inquiries');
 }
 
@@ -200,7 +200,7 @@ export async function adminSetRole(data: FormData): Promise<void> {
   // Never let an admin strip their own access and lock everyone out.
   if (id === admin.id) return;
 
-  getDb().prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+  await (await getDb()).run('UPDATE users SET role = ? WHERE id = ?', [role, id]);
   revalidatePath('/admin/users');
 }
 
@@ -215,15 +215,14 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
   }
 
   const v = parsed.data;
-  const db = getDb();
+  const db = await getDb();
 
   const base = slugify(`${v.year}-${v.make}-${v.model}-${v.body_style}`);
+  const taken = new Set(
+    (await db.all<{ slug: string }>('SELECT slug FROM listings WHERE slug = ? OR slug LIKE ?', [base, `${base}-%`])).map((r) => r.slug),
+  );
   let slug = base;
-  let n = 2;
-  while (db.prepare('SELECT 1 FROM listings WHERE slug = ?').get(slug)) {
-    slug = `${base}-${n}`;
-    n += 1;
-  }
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
 
   const uploads = data.getAll('photos').filter((f): f is File => f instanceof File);
   const { paths } = await storeImages(uploads);
@@ -231,7 +230,7 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
   const images = finalImages([...paths, ...linked]);
   const credits = creditsFor(images, data.get('image_credits'));
 
-  db.prepare(
+  await db.run(
     `INSERT INTO listings (
        slug, title, body_style, make, model, year, price, mileage, passengers,
        condition, fuel, transmission, drivetrain, exterior_color, interior_color, vin,
@@ -241,7 +240,7 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
        @condition, @fuel, @transmission, @drivetrain, @exterior_color, @interior_color, @vin,
        @city, @state, @description, @features, @images, @image_credits, @seller_name, @seller_phone, 'published'
      )`,
-  ).run({
+    {
     ...v,
     slug,
     vin: v.vin || null,
@@ -249,7 +248,8 @@ export async function adminCreateListing(_prev: FormState, data: FormData): Prom
     features: JSON.stringify((v.features ?? '').split('\n').map((l) => l.trim()).filter(Boolean)),
     images: JSON.stringify(images),
     image_credits: JSON.stringify(credits),
-  });
+    },
+  );
 
   revalidatePath('/admin/listings');
   revalidatePath('/inventory');
@@ -264,14 +264,14 @@ export async function adminSearchPhotos(query: string): Promise<Photo[]> {
 
 /**
  * Finds and stores photos for every listing still on drawn placeholders.
- * Storing them (rather than relying on render-time lookup) means they survive
- * in a downloaded database with no further calls to Wikimedia.
+ * Storing them (rather than relying on render-time lookup) means pages no
+ * longer depend on Wikimedia being reachable.
  */
 export async function adminAutofillPhotos(): Promise<void> {
   await requireAdmin();
 
-  const db = getDb();
-  const rows = (db.prepare('SELECT * FROM listings').all() as unknown as Listing[]).map(parseListing);
+  const db = await getDb();
+  const rows = (await db.all<Listing>('SELECT * FROM listings')).map(parseListing);
   const targets = rows.filter(needsPhotos);
 
   let filled = 0;
@@ -280,11 +280,11 @@ export async function adminAutofillPhotos(): Promise<void> {
     for (let next = queue.shift(); next; next = queue.shift()) {
       const photos = await findPhotosForListing(next);
       if (photos.length === 0) continue;
-      db.prepare('UPDATE listings SET images = ?, image_credits = ? WHERE id = ?').run(
+      await db.run('UPDATE listings SET images = ?, image_credits = ? WHERE id = ?', [
         JSON.stringify(photos.map((p) => p.src)),
         JSON.stringify(photos.map(toCredit)),
         next.id,
-      );
+      ]);
       filled += 1;
     }
   };

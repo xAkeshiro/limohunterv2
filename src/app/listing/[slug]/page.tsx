@@ -23,7 +23,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const found = getListingBySlug(slug);
+  const found = await getListingBySlug(slug);
   if (!found) return { title: 'Listing not found' };
   const listing = await withPhotos(found);
 
@@ -40,13 +40,13 @@ export async function generateMetadata({
 
 export default async function ListingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const found = getListingBySlug(slug);
+  const found = await getListingBySlug(slug);
   if (!found) notFound();
 
-  incrementViews(found.id);
+  await incrementViews(found.id);
   const [listing, similar] = await Promise.all([
     withPhotos(found),
-    withPhotosAll(getSimilar(found, 3)),
+    getSimilar(found, 3).then(withPhotosAll),
   ]);
   const user = await currentUser();
 

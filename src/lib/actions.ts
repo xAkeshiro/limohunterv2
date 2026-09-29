@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getDb } from './db';
 import { saveInquiry, toggleFavorite } from './queries';
-import { checkPassword, currentUser, endSession, hashPassword, startSession } from './auth';
+import { SessionConfigError, checkPassword, currentUser, endSession, hashPassword, startSession } from './auth';
 import { slugify } from './format';
 import type { User } from './types';
 import { getPlan, planLabel } from './plans';
@@ -53,7 +53,7 @@ export async function submitInquiry(_prev: FormState, data: FormData): Promise<F
   const rawId = data.get('listing_id');
   const listingId = rawId ? Number(rawId) : null;
 
-  saveInquiry({
+  await saveInquiry({
     listingId: Number.isInteger(listingId) ? listingId : null,
     name: parsed.data.name,
     email: parsed.data.email,
@@ -91,25 +91,33 @@ export async function register(_prev: FormState, data: FormData): Promise<FormSt
     return { ok: false, message: 'Please correct the fields below.', errors: fieldErrors(parsed.error) };
   }
 
-  const db = getDb();
-  const exists = db.prepare('SELECT 1 FROM users WHERE email = ?').get(parsed.data.email);
-  if (exists) {
+  const db = await getDb();
+  const hash = await hashPassword(parsed.data.password);
+
+  // The unique index settles races between two signups for one email.
+  const created = await db.get<{ id: number }>(
+    `INSERT INTO users (email, password_hash, name, company, phone) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (email) DO NOTHING RETURNING id`,
+    [parsed.data.email, hash, parsed.data.name, parsed.data.company || null, parsed.data.phone || null],
+  );
+  if (!created) {
     return { ok: false, message: 'An account with that email already exists.', errors: { email: 'Already registered' } };
   }
 
-  const hash = await hashPassword(parsed.data.password);
-  const result = db
-    .prepare('INSERT INTO users (email, password_hash, name, company, phone) VALUES (?, ?, ?, ?, ?)')
-    .run(
-      parsed.data.email,
-      hash,
-      parsed.data.name,
-      parsed.data.company || null,
-      parsed.data.phone || null,
-    );
-
-  await startSession(Number(result.lastInsertRowid));
+  const failure = await trySession(created.id);
+  if (failure) return failure;
   redirect(safeNextPath(data.get('next')) ?? '/account');
+}
+
+/** Starts a session, turning a missing SESSION_SECRET into a form message. */
+async function trySession(userId: number): Promise<FormState | null> {
+  try {
+    await startSession(userId);
+    return null;
+  } catch (err) {
+    if (err instanceof SessionConfigError) return { ok: false, message: err.message };
+    throw err;
+  }
 }
 
 export async function login(_prev: FormState, data: FormData): Promise<FormState> {
@@ -120,14 +128,16 @@ export async function login(_prev: FormState, data: FormData): Promise<FormState
     return { ok: false, message: 'Enter your email and password.' };
   }
 
-  const user = getDb().prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
+  const db = await getDb();
+  const user = await db.get<User>('SELECT * FROM users WHERE email = ?', [email]);
 
   // Same message either way so the form does not reveal which emails exist.
   if (!user || !(await checkPassword(password, user.password_hash))) {
     return { ok: false, message: 'Email or password is incorrect.' };
   }
 
-  await startSession(user.id);
+  const failure = await trySession(user.id);
+  if (failure) return failure;
   redirect(safeNextPath(data.get('next')) ?? '/account');
 }
 
@@ -187,7 +197,7 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
   // Admins list house inventory: no plan needed and no expiry.
   const isAdmin = user.role === 'admin';
   if (!isAdmin) {
-    const quota = quotaFor(user.id);
+    const quota = await quotaFor(user.id);
     if (quota.reason === 'no-plan') {
       return { ok: false, message: 'Choose a subscription plan before listing a vehicle.' };
     }
@@ -200,16 +210,8 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
   }
 
   const v = parsed.data;
-  const db = getDb();
-
-  // Slugs must stay unique; append a counter when the natural slug is taken.
-  const base = slugify(`${v.year}-${v.make}-${v.model}-${v.body_style}`);
-  let slug = base;
-  let n = 2;
-  while (db.prepare('SELECT 1 FROM listings WHERE slug = ?').get(slug)) {
-    slug = `${base}-${n}`;
-    n += 1;
-  }
+  const db = await getDb();
+  const slug = await uniqueSlug(slugify(`${v.year}-${v.make}-${v.model}-${v.body_style}`));
 
   const key = IMAGE_KEY[v.body_style] ?? 'sedan';
   const images = [1, 2, 3, 4].map((i) => `/img/${key}-${i}.svg`);
@@ -218,7 +220,7 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
     .map((line) => line.trim())
     .filter(Boolean);
 
-  db.prepare(
+  await db.run(
     `INSERT INTO listings (
        slug, title, body_style, make, model, year, price, mileage, passengers,
        condition, fuel, exterior_color, interior_color, city, state,
@@ -229,14 +231,15 @@ export async function createListing(_prev: FormState, data: FormData): Promise<F
        @description, @features, @images, @seller_id, @seller_name, @seller_phone, 'published',
        ${isAdmin ? 'NULL' : LISTING_EXPIRY_SQL}
      )`,
-  ).run({
+    {
     ...v,
     state: v.state.toUpperCase(),
     slug,
     features: JSON.stringify(features),
     images: JSON.stringify(images),
     seller_id: user.id,
-  });
+    },
+  );
 
   revalidatePath('/inventory');
   revalidatePath('/account');
@@ -252,7 +255,8 @@ export async function deleteListing(data: FormData): Promise<void> {
   if (!Number.isInteger(id)) return;
 
   // Scoped to the owner so one seller cannot delete another's listing.
-  getDb().prepare('DELETE FROM listings WHERE id = ? AND seller_id = ?').run(id, user.id);
+  const db = await getDb();
+  await db.run('DELETE FROM listings WHERE id = ? AND seller_id = ?', [id, user.id]);
 
   revalidatePath('/account');
   revalidatePath('/inventory');
@@ -265,7 +269,7 @@ export async function favorite(data: FormData): Promise<void> {
   const id = Number(data.get('listing_id'));
   if (!Number.isInteger(id)) return;
 
-  toggleFavorite(user.id, id);
+  await toggleFavorite(user.id, id);
   revalidatePath('/account');
 }
 
@@ -281,7 +285,7 @@ export async function subscribeToPlan(data: FormData): Promise<void> {
     redirect(`/register?next=${encodeURIComponent(`/subscriptions/checkout?plan=${plan.id}`)}`);
   }
 
-  subscribe(user.id, plan.id);
+  await subscribe(user.id, plan.id);
   revalidatePath('/account');
   revalidatePath('/subscriptions');
   redirect(`/account?subscribed=${plan.id}`);
@@ -290,7 +294,7 @@ export async function subscribeToPlan(data: FormData): Promise<void> {
 export async function cancelPlan(): Promise<void> {
   const user = await currentUser();
   if (!user) redirect('/login');
-  cancelSubscription(user.id);
+  await cancelSubscription(user.id);
   revalidatePath('/account');
   revalidatePath('/subscriptions');
 }
@@ -298,7 +302,7 @@ export async function cancelPlan(): Promise<void> {
 export async function resumePlan(): Promise<void> {
   const user = await currentUser();
   if (!user) redirect('/login');
-  resumeSubscription(user.id);
+  await resumeSubscription(user.id);
   revalidatePath('/account');
   revalidatePath('/subscriptions');
 }
@@ -310,8 +314,21 @@ export async function renewMyListing(data: FormData): Promise<void> {
   const id = Number(data.get('id'));
   if (!Number.isInteger(id)) return;
 
-  const result = renewListing(user.id, id);
+  const result = await renewListing(user.id, id);
   revalidatePath('/account');
   revalidatePath('/inventory');
   if (!result.ok) redirect(`/account?renew=${result.reason}`);
+}
+
+/** Natural slug, with a numeric suffix when it is already taken. */
+async function uniqueSlug(base: string): Promise<string> {
+  const db = await getDb();
+  const taken = new Set(
+    (await db.all<{ slug: string }>("SELECT slug FROM listings WHERE slug = ? OR slug LIKE ?", [base, `${base}-%`])).map(
+      (r) => r.slug,
+    ),
+  );
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
 }

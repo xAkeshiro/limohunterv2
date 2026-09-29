@@ -25,7 +25,7 @@ function Gate({ title, body, children }: { title: string; body: string; children
 export default async function SellPage() {
   const user = await currentUser();
   const isAdmin = user?.role === 'admin';
-  const quota = user && !isAdmin ? quotaFor(user.id) : null;
+  const quota = user && !isAdmin ? await quotaFor(user.id) : null;
 
   let body: React.ReactNode;
 

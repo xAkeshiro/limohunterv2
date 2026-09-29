@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description: 'Fleet Marketplace connects buyers and sellers of second-hand limousines and luxury transportation equipment across the United States.',
 };
 
-export default function AboutPage() {
-  const totals = stats();
+export default async function AboutPage() {
+  const totals = await stats();
 
   return (
     <div className="wrap py-10">

@@ -62,9 +62,8 @@ export default async function InventoryPage({
     per_page: 12,
   };
 
-  const found = searchListings(filters);
+  const [found, facets] = await Promise.all([searchListings(filters), getFacets()]);
   const results = { ...found, items: await withPhotosAll(found.items) };
-  const facets = getFacets();
 
   // Query string used by pagination links, with `page` stripped out.
   const base = new URLSearchParams();

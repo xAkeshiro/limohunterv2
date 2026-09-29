@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getDb } from './db';
 import { currentUser } from './auth';
-import { parseListing, type Listing, type ListingView, type User } from './types';
 import { getPlan } from './plans';
+import { parseListing, type Listing, type ListingView, type User } from './types';
 
 /**
  * Gate for every /admin route. Non-admins are sent away rather than shown a
@@ -38,17 +38,17 @@ const ADMIN_SORTS: Record<string, string> = {
   title: 'title ASC',
 };
 
-/** Unlike the public search, this sees every status including drafts and sold. */
-export function adminListings(f: AdminListingFilters = {}) {
-  const db = getDb();
+/** Unlike the public search, this sees every status including drafts and expired. */
+export async function adminListings(f: AdminListingFilters = {}) {
+  const db = await getDb();
   const perPage = Math.min(Math.max(f.per_page ?? 20, 1), 100);
   const page = Math.max(f.page ?? 1, 1);
 
-  const clauses: string[] = ['1=1'];
+  const clauses: string[] = ['TRUE'];
   const params: unknown[] = [];
 
   if (f.q) {
-    clauses.push('(title LIKE ? OR make LIKE ? OR model LIKE ? OR seller_name LIKE ?)');
+    clauses.push('(title ILIKE ? OR make ILIKE ? OR model ILIKE ? OR seller_name ILIKE ?)');
     const needle = `%${f.q}%`;
     params.push(needle, needle, needle, needle);
   }
@@ -64,13 +64,13 @@ export function adminListings(f: AdminListingFilters = {}) {
   const where = clauses.join(' AND ');
   const orderBy = ADMIN_SORTS[f.sort ?? 'newest'] ?? ADMIN_SORTS.newest;
 
-  const { total } = db
-    .prepare(`SELECT COUNT(*) AS total FROM listings WHERE ${where}`)
-    .get(...params) as { total: number };
-
-  const rows = db
-    .prepare(`SELECT * FROM listings WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-    .all(...params, perPage, (page - 1) * perPage) as Listing[];
+  const count = await db.get<{ total: number }>(`SELECT COUNT(*) AS total FROM listings WHERE ${where}`, params);
+  const rows = await db.all<Listing>(`SELECT * FROM listings WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`, [
+    ...params,
+    perPage,
+    (page - 1) * perPage,
+  ]);
+  const total = count?.total ?? 0;
 
   return {
     items: rows.map(parseListing),
@@ -81,8 +81,10 @@ export function adminListings(f: AdminListingFilters = {}) {
   };
 }
 
-export function adminListingById(id: number): ListingView | null {
-  const row = getDb().prepare('SELECT * FROM listings WHERE id = ?').get(id) as Listing | undefined;
+export async function adminListingById(id: number): Promise<ListingView | null> {
+  if (!Number.isInteger(id)) return null;
+  const db = await getDb();
+  const row = await db.get<Listing>('SELECT * FROM listings WHERE id = ?', [id]);
   return row ? parseListing(row) : null;
 }
 
@@ -99,70 +101,77 @@ export interface AdminInquiry {
   listing_slug: string | null;
 }
 
-export function adminInquiries(limit = 100): AdminInquiry[] {
-  return getDb()
-    .prepare(
-      `SELECT i.*, l.title AS listing_title, l.slug AS listing_slug
-       FROM inquiries i
-       LEFT JOIN listings l ON l.id = i.listing_id
-       ORDER BY i.created_at DESC, i.id DESC
-       LIMIT ?`,
-    )
-    .all(limit) as AdminInquiry[];
+export async function adminInquiries(limit = 100): Promise<AdminInquiry[]> {
+  const db = await getDb();
+  return db.all<AdminInquiry>(
+    `SELECT i.*, l.title AS listing_title, l.slug AS listing_slug
+     FROM inquiries i
+     LEFT JOIN listings l ON l.id = i.listing_id
+     ORDER BY i.created_at DESC, i.id DESC
+     LIMIT ?`,
+    [limit],
+  );
 }
 
 export interface AdminUser extends User {
   listing_count: number;
 }
 
-export function adminUsers(): AdminUser[] {
-  return getDb()
-    .prepare(
-      `SELECT u.*, COUNT(l.id) AS listing_count
-       FROM users u
-       LEFT JOIN listings l ON l.seller_id = u.id
-       GROUP BY u.id
-       ORDER BY u.created_at DESC`,
-    )
-    .all() as AdminUser[];
+export async function adminUsers(): Promise<AdminUser[]> {
+  const db = await getDb();
+  return db.all<AdminUser>(
+    `SELECT u.*, COUNT(l.id) AS listing_count
+     FROM users u
+     LEFT JOIN listings l ON l.seller_id = u.id
+     GROUP BY u.id
+     ORDER BY u.created_at DESC`,
+  );
 }
 
-export function adminStats() {
-  const db = getDb();
-  const one = (sql: string) => (db.prepare(sql).get() as { n: number }).n;
+export async function adminStats() {
+  const db = await getDb();
+  const row = await db.get<{
+    listings: number; published: number; drafts: number; sold: number; featured: number;
+    views: number; value: number;
+  }>(
+    `SELECT COUNT(*) AS listings,
+            COUNT(*) FILTER (WHERE status = 'published') AS published,
+            COUNT(*) FILTER (WHERE status = 'draft') AS drafts,
+            COUNT(*) FILTER (WHERE sold = 1) AS sold,
+            COUNT(*) FILTER (WHERE featured = 1) AS featured,
+            COALESCE(SUM(views), 0) AS views,
+            COALESCE(SUM(price) FILTER (WHERE status = 'published'), 0) AS value
+     FROM listings`,
+  );
+  const users = await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM users');
+  const inquiries = await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM inquiries');
 
   return {
-    listings: one('SELECT COUNT(*) n FROM listings'),
-    published: one("SELECT COUNT(*) n FROM listings WHERE status = 'published'"),
-    drafts: one("SELECT COUNT(*) n FROM listings WHERE status = 'draft'"),
-    sold: one('SELECT COUNT(*) n FROM listings WHERE sold = 1'),
-    featured: one('SELECT COUNT(*) n FROM listings WHERE featured = 1'),
-    users: one('SELECT COUNT(*) n FROM users'),
-    inquiries: one('SELECT COUNT(*) n FROM inquiries'),
-    views: one('SELECT COALESCE(SUM(views), 0) n FROM listings'),
-    value: (
-      db.prepare("SELECT COALESCE(SUM(price), 0) n FROM listings WHERE status='published'").get() as {
-        n: number;
-      }
-    ).n,
+    listings: row?.listings ?? 0,
+    published: row?.published ?? 0,
+    drafts: row?.drafts ?? 0,
+    sold: row?.sold ?? 0,
+    featured: row?.featured ?? 0,
+    views: row?.views ?? 0,
+    value: row?.value ?? 0,
+    users: users?.n ?? 0,
+    inquiries: inquiries?.n ?? 0,
   };
 }
 
-export function adminStatusOptions(): string[] {
-  const rows = getDb()
-    .prepare('SELECT DISTINCT status FROM listings ORDER BY status')
-    .all() as { status: string }[];
+export async function adminStatusOptions(): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.all<{ status: string }>('SELECT DISTINCT status FROM listings ORDER BY status');
   return rows.map((r) => r.status);
 }
 
-/** Subscriptions that are still in their paid period, with revenue from renewing ones. */
-export function adminSubscriptionStats() {
-  const rows = getDb()
-    .prepare(
-      `SELECT plan_id, status FROM subscriptions
-       WHERE status IN ('active', 'cancelled') AND current_period_end > datetime('now')`,
-    )
-    .all() as { plan_id: string; status: string }[];
+/** Subscriptions still in their paid period, with revenue from renewing ones. */
+export async function adminSubscriptionStats() {
+  const db = await getDb();
+  const rows = await db.all<{ plan_id: string; status: string }>(
+    `SELECT plan_id, status FROM subscriptions
+     WHERE status IN ('active', 'cancelled') AND current_period_end > now()`,
+  );
 
   let mrr = 0;
   for (const r of rows) {

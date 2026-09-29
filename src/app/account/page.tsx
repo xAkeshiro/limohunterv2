@@ -47,10 +47,10 @@ export default async function AccountPage({
   const renewError = RENEW_ERROR[one(sp.renew) ?? ''];
 
   const isAdmin = user.role === 'admin';
-  const quota = quotaFor(user.id);
+  const quota = await quotaFor(user.id);
   const sub = quota.subscription;
-  const listings = listingsForUser(user.id);
-  const saved = await withPhotosAll(favoritesForUser(user.id));
+  const listings = await listingsForUser(user.id);
+  const saved = await withPhotosAll(await favoritesForUser(user.id));
   const pct = quota.limit ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0;
 
   return (

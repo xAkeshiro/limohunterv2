@@ -11,7 +11,8 @@ export const metadata: Metadata = { title: 'Users' };
 
 export default async function AdminUsersPage() {
   const me = await requireAdmin();
-  const users = adminUsers();
+  const users = await adminUsers();
+  const plans = new Map(await Promise.all(users.map(async (u) => [u.id, await currentSubscription(u.id)] as const)));
 
   return (
     <div>
@@ -41,7 +42,7 @@ export default async function AdminUsersPage() {
                 <td className="py-3 pr-4 text-slate-400">{u.company ?? '—'}</td>
                 <td className="py-3 pr-4 text-slate-300">
                   {(() => {
-                    const sub = currentSubscription(u.id);
+                    const sub = plans.get(u.id);
                     if (!sub) return <span className="text-slate-500">—</span>;
                     return (
                       <>

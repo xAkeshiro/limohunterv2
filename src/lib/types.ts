@@ -147,5 +147,5 @@ function safeJson<T>(raw: string, fallback: T): T {
  */
 export function liveSql(alias = ''): string {
   const a = alias ? `${alias}.` : '';
-  return `${a}status = 'published' AND (${a}expires_at IS NULL OR ${a}expires_at > datetime('now'))`;
+  return `${a}status = 'published' AND (${a}expires_at IS NULL OR ${a}expires_at > now())`;
 }

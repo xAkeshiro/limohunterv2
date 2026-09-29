@@ -1,15 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // The WASM SQLite driver must not be bundled, so it can locate its .wasm file.
-  serverExternalPackages: ['node-sqlite3-wasm'],
+  // Loaded from node_modules at runtime rather than bundled: PGlite must find
+  // its WebAssembly and data files, and postgres uses Node's net/tls.
+  serverExternalPackages: ['@electric-sql/pglite', 'postgres'],
   outputFileTracingIncludes: {
-    // Both the seeded database and the WASM binary are read at request time,
-    // so they have to be traced in rather than left behind as unreferenced files.
-    '/**': [
-      './data/fleet-marketplace.db',
-      './node_modules/node-sqlite3-wasm/dist/*.wasm',
-    ],
+    // PGlite is only used when no DATABASE_URL is set, and is imported
+    // dynamically, so its runtime files have to be traced in explicitly.
+    '/**': ['./node_modules/@electric-sql/pglite/dist/**/*'],
   },
 };
 

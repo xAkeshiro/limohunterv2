@@ -13,8 +13,8 @@ const KIND_LABEL: Record<string, string> = {
   general: 'General message',
 };
 
-export default function AdminInquiriesPage() {
-  const inquiries = adminInquiries(200);
+export default async function AdminInquiriesPage() {
+  const inquiries = await adminInquiries(200);
 
   return (
     <div>

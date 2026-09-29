@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Edit listing' };
 
 export default async function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const listing = adminListingById(Number(id));
+  const listing = await adminListingById(Number(id));
   if (!listing) notFound();
 
   return (

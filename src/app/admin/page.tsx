@@ -5,11 +5,14 @@ import StatusPill from '@/components/admin/StatusPill';
 
 export const dynamic = 'force-dynamic';
 
-export default function AdminDashboard() {
-  const s = adminStats();
-  const subs = adminSubscriptionStats();
-  const recent = adminListings({ per_page: 6, sort: 'newest' }).items;
-  const inquiries = adminInquiries(5);
+export default async function AdminDashboard() {
+  const [s, subs, recentPage, inquiries] = await Promise.all([
+    adminStats(),
+    adminSubscriptionStats(),
+    adminListings({ per_page: 6, sort: 'newest' }),
+    adminInquiries(5),
+  ]);
+  const recent = recentPage.items;
 
   const tiles = [
     { label: 'Total listings', value: s.listings, href: '/admin/listings' },
@@ -50,16 +53,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-
-      <section className="mt-6">
-        <a href="/admin/database" className="btn-ghost" download>
-          Download database
-        </a>
-        <p className="mt-2 text-xs text-slate-500">
-          Commit the downloaded file to <code className="font-mono">data/fleet-marketplace.db</code>{' '}
-          to make the current listings permanent.
-        </p>
-      </section>
 
       <section className="mt-10">
         <div className="flex items-center justify-between">

@@ -58,7 +58,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const sp = await searchParams;
   const page = Number(one(sp.page) ?? 1) || 1;
 
-  const results = adminListings({
+  const results = await adminListings({
     q: one(sp.q),
     status: one(sp.status),
     body_style: one(sp.body_style),
@@ -67,7 +67,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     per_page: 20,
   });
 
-  const statuses = adminStatusOptions();
+  const statuses = await adminStatusOptions();
   // Thumbnails show what visitors see, including auto-sourced photos.
   const items = await withPhotosAll(results.items);
   const filled = one(sp.filled);

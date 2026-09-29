@@ -2,9 +2,6 @@ node_modules/
 .next/
 out/
 build/
-data/*.db-journal
-data/*.db-wal
-data/*.db-shm
 .env
 .env.local
 *.log
@@ -13,3 +10,4 @@ next-env.d.ts
 public/uploads/*
 !public/uploads/.gitkeep
 tsconfig.tsbuildinfo
+data/pglite/

@@ -20,7 +20,7 @@ const INTRO: Record<PlanGroup, string> = {
 
 export default async function SubscriptionsPage() {
   const user = await currentUser();
-  const current = user ? currentSubscription(user.id) : null;
+  const current = user ? await currentSubscription(user.id) : null;
 
   return (
     <div className="wrap py-10">

@@ -27,8 +27,9 @@ function buildWhere(f: ListingFilters): { sql: string; params: unknown[] } {
   const params: unknown[] = [];
 
   if (f.q) {
+    // ILIKE: Postgres LIKE is case-sensitive, and searches should not be.
     clauses.push(
-      '(l.title LIKE ? OR l.make LIKE ? OR l.model LIKE ? OR l.description LIKE ? OR l.body_style LIKE ?)',
+      '(l.title ILIKE ? OR l.make ILIKE ? OR l.model ILIKE ? OR l.description ILIKE ? OR l.body_style ILIKE ?)',
     );
     const needle = `%${f.q}%`;
     params.push(needle, needle, needle, needle, needle);
@@ -61,22 +62,19 @@ function buildWhere(f: ListingFilters): { sql: string; params: unknown[] } {
   return { sql: clauses.join(' AND '), params };
 }
 
-export function searchListings(f: ListingFilters = {}): ListingPage {
-  const db = getDb();
+export async function searchListings(f: ListingFilters = {}): Promise<ListingPage> {
+  const db = await getDb();
   const perPage = Math.min(Math.max(f.per_page ?? 12, 1), 60);
   const page = Math.max(f.page ?? 1, 1);
   const { sql, params } = buildWhere(f);
   const orderBy = SORTS[f.sort ?? 'newest'] ?? SORTS.newest;
 
-  const { total } = db
-    .prepare(`SELECT COUNT(*) AS total FROM listings l WHERE ${sql}`)
-    .get(...params) as { total: number };
-
-  const rows = db
-    .prepare(
-      `SELECT l.* FROM listings l WHERE ${sql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
-    )
-    .all(...params, perPage, (page - 1) * perPage) as Listing[];
+  const count = await db.get<{ total: number }>(`SELECT COUNT(*) AS total FROM listings l WHERE ${sql}`, params);
+  const rows = await db.all<Listing>(
+    `SELECT l.* FROM listings l WHERE ${sql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
+    [...params, perPage, (page - 1) * perPage],
+  );
+  const total = count?.total ?? 0;
 
   return {
     items: rows.map(parseListing),
@@ -87,161 +85,150 @@ export function searchListings(f: ListingFilters = {}): ListingPage {
   };
 }
 
-export function getListingBySlug(slug: string): ListingView | null {
-  const row = getDb()
-    .prepare(`SELECT * FROM listings WHERE slug = ? AND ${liveSql()}`)
-    .get(slug) as Listing | undefined;
+export async function getListingBySlug(slug: string): Promise<ListingView | null> {
+  const db = await getDb();
+  const row = await db.get<Listing>(`SELECT * FROM listings WHERE slug = ? AND ${liveSql()}`, [slug]);
   return row ? parseListing(row) : null;
 }
 
-export function getListingsByIds(ids: number[]): ListingView[] {
+export async function getListingsByIds(ids: number[]): Promise<ListingView[]> {
   if (ids.length === 0) return [];
-  const rows = getDb()
-    .prepare(
-      `SELECT * FROM listings WHERE id IN (${ids.map(() => '?').join(',')}) AND ${liveSql()}`,
-    )
-    .all(...ids) as Listing[];
+  const db = await getDb();
+  const rows = await db.all<Listing>(
+    `SELECT * FROM listings WHERE id IN (${ids.map(() => '?').join(',')}) AND ${liveSql()}`,
+    ids,
+  );
 
   // Preserve the caller's ordering so compare columns stay where the user put them.
   const byId = new Map(rows.map((r) => [r.id, parseListing(r)]));
   return ids.map((id) => byId.get(id)).filter((r): r is ListingView => Boolean(r));
 }
 
-export function getFeatured(limit = 6): ListingView[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT * FROM listings WHERE ${liveSql()} AND featured = 1 ORDER BY created_at DESC LIMIT ?`,
-    )
-    .all(limit) as Listing[];
+export async function getFeatured(limit = 6): Promise<ListingView[]> {
+  const db = await getDb();
+  const rows = await db.all<Listing>(
+    `SELECT * FROM listings WHERE ${liveSql()} AND featured = 1 ORDER BY created_at DESC LIMIT ?`,
+    [limit],
+  );
   return rows.map(parseListing);
 }
 
-export function getRecent(limit = 8): ListingView[] {
-  const rows = getDb()
-    .prepare(`SELECT * FROM listings WHERE ${liveSql()} ORDER BY created_at DESC LIMIT ?`)
-    .all(limit) as Listing[];
+export async function getRecent(limit = 8): Promise<ListingView[]> {
+  const db = await getDb();
+  const rows = await db.all<Listing>(`SELECT * FROM listings WHERE ${liveSql()} ORDER BY created_at DESC LIMIT ?`, [limit]);
   return rows.map(parseListing);
 }
 
-export function getSimilar(listing: ListingView, limit = 3): ListingView[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT * FROM listings
-       WHERE ${liveSql()} AND id != ? AND body_style = ?
-       ORDER BY ABS(price - ?) ASC LIMIT ?`,
-    )
-    .all(listing.id, listing.body_style, listing.price, limit) as Listing[];
+export async function getSimilar(listing: ListingView, limit = 3): Promise<ListingView[]> {
+  const db = await getDb();
+  const rows = await db.all<Listing>(
+    `SELECT * FROM listings
+     WHERE ${liveSql()} AND id <> ? AND body_style = ?
+     ORDER BY ABS(price - ?::int) ASC LIMIT ?`,
+    [listing.id, listing.body_style, listing.price, limit],
+  );
   return rows.map(parseListing);
 }
 
-export function incrementViews(id: number): void {
-  getDb().prepare('UPDATE listings SET views = views + 1 WHERE id = ?').run(id);
+export async function incrementViews(id: number): Promise<void> {
+  const db = await getDb();
+  await db.run('UPDATE listings SET views = views + 1 WHERE id = ?', [id]);
 }
+
+type Facet = { value: string; count: number };
 
 /** Distinct values used to populate the inventory filter sidebar. */
-export function getFacets() {
-  const db = getDb();
-  const column = (name: string) =>
+export async function getFacets() {
+  const db = await getDb();
+  // Column names come from this fixed list, never from input.
+  const column = async (name: 'body_style' | 'make' | 'state' | 'condition') =>
     (
-      db
-        .prepare(
-          `SELECT ${name} AS value, COUNT(*) AS count FROM listings
-           WHERE ${liveSql()} GROUP BY ${name} ORDER BY count DESC, value ASC`,
-        )
-        .all() as { value: string; count: number }[]
+      await db.all<Facet>(
+        `SELECT ${name} AS value, COUNT(*) AS count FROM listings
+         WHERE ${liveSql()} GROUP BY ${name} ORDER BY count DESC, value ASC`,
+      )
     ).filter((r) => Boolean(r.value));
 
-  const bounds = db
-    .prepare(
-      `SELECT MIN(price) AS minPrice, MAX(price) AS maxPrice,
-              MIN(year) AS minYear, MAX(year) AS maxYear
+  const [bodyStyles, makes, states, conditions, bounds] = await Promise.all([
+    column('body_style'),
+    column('make'),
+    column('state'),
+    column('condition'),
+    db.get<{ minPrice: number; maxPrice: number; minYear: number; maxYear: number }>(
+      `SELECT MIN(price) AS "minPrice", MAX(price) AS "maxPrice",
+              MIN(year) AS "minYear", MAX(year) AS "maxYear"
        FROM listings WHERE ${liveSql()}`,
-    )
-    .get() as { minPrice: number; maxPrice: number; minYear: number; maxYear: number };
+    ),
+  ]);
 
   return {
-    bodyStyles: column('body_style'),
-    makes: column('make'),
-    states: column('state'),
-    conditions: column('condition'),
-    bounds: bounds ?? { minPrice: 0, maxPrice: 0, minYear: 0, maxYear: 0 },
+    bodyStyles,
+    makes,
+    states,
+    conditions,
+    bounds: {
+      minPrice: bounds?.minPrice ?? 0,
+      maxPrice: bounds?.maxPrice ?? 0,
+      minYear: bounds?.minYear ?? 0,
+      maxYear: bounds?.maxYear ?? 0,
+    },
   };
 }
 
-export function countByBodyStyle(): { value: string; count: number }[] {
-  return getDb()
-    .prepare(
-      `SELECT body_style AS value, COUNT(*) AS count FROM listings
-       WHERE ${liveSql()} GROUP BY body_style ORDER BY count DESC`,
-    )
-    .all() as { value: string; count: number }[];
+export async function countByBodyStyle(): Promise<Facet[]> {
+  const db = await getDb();
+  return db.all<Facet>(
+    `SELECT body_style AS value, COUNT(*) AS count FROM listings
+     WHERE ${liveSql()} GROUP BY body_style ORDER BY count DESC`,
+  );
 }
 
-export function stats() {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS listings,
-              COUNT(DISTINCT make)  AS makes,
-              COUNT(DISTINCT state) AS states
-       FROM listings WHERE ${liveSql()}`,
-    )
-    .get() as { listings: number; makes: number; states: number };
-  const sellers = db.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number };
-  return { ...row, sellers: sellers.n };
+export async function stats() {
+  const db = await getDb();
+  const row = await db.get<{ listings: number; makes: number; states: number }>(
+    `SELECT COUNT(*) AS listings, COUNT(DISTINCT make) AS makes, COUNT(DISTINCT state) AS states
+     FROM listings WHERE ${liveSql()}`,
+  );
+  const sellers = await db.get<{ n: number }>('SELECT COUNT(*) AS n FROM users');
+  return { listings: row?.listings ?? 0, makes: row?.makes ?? 0, states: row?.states ?? 0, sellers: sellers?.n ?? 0 };
 }
 
-export function listingsForUser(userId: number): ListingView[] {
-  const rows = getDb()
-    .prepare('SELECT * FROM listings WHERE seller_id = ? ORDER BY created_at DESC')
-    .all(userId) as Listing[];
+export async function listingsForUser(userId: number): Promise<ListingView[]> {
+  const db = await getDb();
+  const rows = await db.all<Listing>('SELECT * FROM listings WHERE seller_id = ? ORDER BY created_at DESC', [userId]);
   return rows.map(parseListing);
 }
 
-export function favoritesForUser(userId: number): ListingView[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT l.* FROM listings l
-       JOIN favorites f ON f.listing_id = l.id
-       WHERE f.user_id = ? ORDER BY f.created_at DESC`,
-    )
-    .all(userId) as Listing[];
+export async function favoritesForUser(userId: number): Promise<ListingView[]> {
+  const db = await getDb();
+  const rows = await db.all<Listing>(
+    `SELECT l.* FROM listings l
+     JOIN favorites f ON f.listing_id = l.id
+     WHERE f.user_id = ? ORDER BY f.created_at DESC`,
+    [userId],
+  );
   return rows.map(parseListing);
 }
 
-export function toggleFavorite(userId: number, listingId: number): boolean {
-  const db = getDb();
-  const existing = db
-    .prepare('SELECT 1 FROM favorites WHERE user_id = ? AND listing_id = ?')
-    .get(userId, listingId);
-
-  if (existing) {
-    db.prepare('DELETE FROM favorites WHERE user_id = ? AND listing_id = ?').run(userId, listingId);
-    return false;
-  }
-  db.prepare('INSERT INTO favorites (user_id, listing_id) VALUES (?, ?)').run(userId, listingId);
+export async function toggleFavorite(userId: number, listingId: number): Promise<boolean> {
+  const db = await getDb();
+  const removed = await db.run('DELETE FROM favorites WHERE user_id = ? AND listing_id = ?', [userId, listingId]);
+  if (removed.rowCount > 0) return false;
+  await db.run('INSERT INTO favorites (user_id, listing_id) VALUES (?, ?) ON CONFLICT DO NOTHING', [userId, listingId]);
   return true;
 }
 
-export function saveInquiry(input: {
+export async function saveInquiry(input: {
   listingId: number | null;
   name: string;
   email: string;
   phone?: string;
   message: string;
   kind?: string;
-}): void {
-  getDb()
-    .prepare(
-      `INSERT INTO inquiries (listing_id, name, email, phone, message, kind)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.listingId,
-      input.name,
-      input.email,
-      input.phone ?? null,
-      input.message,
-      input.kind ?? 'listing',
-    );
+}): Promise<void> {
+  const db = await getDb();
+  await db.run(
+    `INSERT INTO inquiries (listing_id, name, email, phone, message, kind) VALUES (?, ?, ?, ?, ?, ?)`,
+    [input.listingId, input.name, input.email, input.phone ?? null, input.message, input.kind ?? 'listing'],
+  );
 }

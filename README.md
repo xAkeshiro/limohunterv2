@@ -13,26 +13,33 @@ third-party theme or plugin licensing.
 
 ```bash
 npm install      # install dependencies
-npm run seed     # create data/fleet-marketplace.db and load demo inventory
 npm run dev      # http://localhost:3000
 ```
+
+No database server is needed locally: without `DATABASE_URL` the app runs on PGlite (real
+Postgres compiled to WebAssembly) in `data/pglite/`, creates its tables and loads sample
+data on first start. `npm run seed` resets it to a clean state.
 
 Production build:
 
 ```bash
-npm run build && npm start
+npm run build && SESSION_SECRET=<32+ random chars> npm start
 ```
 
-### Demo accounts
+`npm start` runs in production mode, which refuses to sign anyone in without a real
+`SESSION_SECRET` (see *Configuration*).
+
+### Demo accounts (local only)
 
 | Role | Email | Password |
 |---|---|---|
 | Admin | `admin@fleetmarketplace.com` | `demo1234` |
 | Seller | `demo@fleetmarketplace.com` | `demo1234` |
 
-Sign in as the admin and the **Admin** link appears in the header. The demo seller is on
-the Silver Club plan (2 slots) with one live listing and one expired listing, so quotas and
-renewal are visible straight away.
+These exist only on the built-in local database. A hosted database gets **no** demo
+accounts (the password is public), and its admin comes from `ADMIN_EMAIL` /
+`ADMIN_PASSWORD` instead. The demo seller is on the Silver Club plan (2 slots) with one
+live and one expired listing, so quotas and renewal are visible straight away.
 
 ---
 
@@ -74,7 +81,8 @@ underneath it. An admin cannot demote their own account, which prevents locking 
 - **Next.js 15** (App Router, React 19 server components and server actions)
 - **TypeScript** strict mode
 - **Tailwind CSS 3**
-- **SQLite** via `better-sqlite3` — one file, no database server to run
+- **Postgres** via [`postgres`](https://github.com/porsager/postgres) in production (Supabase,
+  Neon or any Postgres), and **PGlite** locally and in tests, so both run the same SQL
 - **bcryptjs** password hashing; HMAC-signed `httpOnly` session cookies
 
 ### Layout
@@ -89,7 +97,9 @@ src/
     admin/        admin nav, filters, forms, status + role controls
     (shared)      header, footer, cards, filters, gallery, forms, calculator
   lib/
-    db.ts            schema + connection
+    db.ts            connection (Postgres or PGlite), schema, first-boot setup
+    seed.ts          admin-from-env bootstrap + sample data loader
+    seed-data.ts     the 32 sample listings
     queries.ts       public reads
     actions.ts       public writes (inquiries, auth, listings, favourites)
     admin.ts         admin guard + admin-only reads
@@ -101,12 +111,15 @@ src/
     format.ts        currency, mileage, dates, slugs, amortisation
     types.ts         shared types and the body-style vocabulary
 scripts/
-  seed.ts           demo inventory              (npm run seed)
-  verify.ts         34-check data-layer test    (npm run verify)
+  seed.ts           reset + reload sample data  (npm run seed; guarded on hosted DBs)
+  verify.ts         52-check data-layer test    (npm run verify)
   verify-photos.ts  30-check photo matcher test (npm run verify)
-  verify-subscriptions.ts  28-check plan rules test (npm run verify)
+  verify-subscriptions.ts  30-check plan rules test (npm run verify)
   make-images.mjs   regenerates illustrations
-  import-photos.mjs bulk-attaches real photos   (npm run import-photos)
+  import-photos.ts  bulk-attaches real photos   (npm run import-photos)
+
+`npm run verify` runs every suite against a throwaway in-memory Postgres; it never
+touches a real database. Run it before every push.
 ```
 
 ---
@@ -141,9 +154,17 @@ Plans live in `src/lib/plans.ts`; the rules live in `src/lib/subscriptions.ts`.
 account shows the plan and a quota meter → list a vehicle.
 
 **Payments are in demo mode.** Confirming a plan activates it without charging, and an
-active plan renews itself each period. To take real payments, connect a provider (Stripe
-Checkout and webhooks are the usual choice): create the charge before `subscribe()` in
-`subscribeToPlan`, and move the renewal in `renewDue()` behind a successful payment.
+active plan renews itself each period. To take real payments with Stripe:
+
+1. In `subscribeToPlan` (`src/lib/actions.ts`), send the user to Stripe Checkout instead of
+   calling `subscribe()` directly; call `subscribe()` from the webhook once payment succeeds.
+2. In `settleLapsed()` (`src/lib/subscriptions.ts`), stop rolling active plans forward and let
+   `invoice.paid` / `customer.subscription.updated|deleted` webhooks move
+   `current_period_end` and `status`, so an unpaid plan lapses. The comment marked
+   `STRIPE:` shows the spot.
+3. The schema already has `users.stripe_customer_id` and
+   `subscriptions.stripe_subscription_id` (both unique) for mapping webhook events back to
+   rows, and a unique index guarantees one current plan per user even if webhooks race.
 
 The admin dashboard shows active subscriptions, plans cancelling at period end, and
 monthly recurring revenue; **Users** shows each person's plan.
@@ -174,8 +195,7 @@ Set `AUTO_PHOTOS=0` to turn it off.
 ### Choosing and storing photos
 
 - **Auto-fill photos** (admin → Listings) finds and *stores* photos for every listing still
-  on drawings in one click. Stored photos survive in a downloaded database with no further
-  calls to Wikimedia.
+  on drawings in one click. Stored photos no longer depend on Wikimedia being reachable.
 - **Find photos online** (listing editor) searches Commons and adds picks one by one, with
   credits kept automatically.
 - **Upload** real photos (needs `BLOB_READ_WRITE_TOKEN` on Vercel) or **paste image URLs**.
@@ -196,8 +216,9 @@ Make sure you hold the rights to any photography you publish.
 
 ## Other placeholder content
 
-- **Inventory** — the 32 seeded listings in `scripts/seed.ts` are illustrative sample
-  records, not real stock. Replace them with a real import.
+- **Inventory** — the 32 sample listings in `src/lib/seed-data.ts` are illustrative, not
+  real stock. They load once into a fresh database; delete them from the admin (they will
+  not come back), or set `SEED_DEMO_INVENTORY=0` before first boot to skip them.
 - **Logo** — `src/components/Logo.tsx` is a plain generic mark. Drop in the real brand
   asset and set the palette in `tailwind.config.ts` (`brand.*`).
 - **Contact details** — the phone number and hours appear in `SiteHeader.tsx`,
@@ -208,7 +229,8 @@ Make sure you hold the rights to any photography you publish.
 ## Importing real inventory
 
 Listings live in one table. The simplest path is a script that reads your existing export
-and inserts rows using the same statement as `scripts/seed.ts`. The columns that matter:
+and inserts rows using the same statement as `seedSampleData` in `src/lib/seed.ts`. The
+columns that matter:
 
 `slug` (unique, URL path) · `title` · `body_style` · `make` · `model` · `year` · `price` ·
 `mileage` · `passengers` · `condition` · `fuel` · `city` · `state` · `description` ·
@@ -222,29 +244,50 @@ stay in sync.
 
 ## Configuration
 
-Copy `.env.example` to `.env`:
+All variables are documented in `.env.example`. The ones that matter in production:
 
-- `SITE_URL` — absolute URL of the deployment, for canonical links and the sitemap
-- `SESSION_SECRET` — **required in production**; generate with
-  `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-- `DATABASE_PATH` — optional override for the SQLite file location
+| Variable | Required | What it does |
+|---|---|---|
+| `DATABASE_URL` | **Yes** | Postgres connection string. `POSTGRES_URL` also works. Without it, data resets on every restart. |
+| `SESSION_SECRET` | **Yes** | Signs login cookies. 16+ characters. Without it, nobody can sign in — deliberately, since the development key is in this public repo and would let anyone forge an admin session. |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First deploy | Creates the first admin on boot. An existing account is promoted and keeps its password. |
+| `BLOB_READ_WRITE_TOKEN` | For uploads | Vercel Blob, so uploaded photos persist. |
+
+Generate a secret with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
 ---
 
-## Deploying
+## Deploying (Vercel + Supabase)
 
-Any host that runs a Node server works (Railway, Render, Fly, a VPS, or Vercel).
+1. **Create the database.** In Supabase, create a project, then open **Connect** and copy
+   the **Transaction pooler** connection string (port `6543`). Replace `[YOUR-PASSWORD]`
+   with the database password you chose. Use the pooler, not the direct connection:
+   serverless functions open many short-lived connections.
+2. **Add environment variables** in Vercel → Project → Settings → Environment Variables:
+   `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (and
+   `BLOB_READ_WRITE_TOKEN` for uploads).
+3. **Redeploy.** On the first request the app creates its tables, creates the admin and
+   loads the sample inventory once. Nothing to run by hand.
+4. Sign in with `ADMIN_EMAIL`, and you can remove `ADMIN_PASSWORD` from Vercel afterwards.
 
-Two things need persistent storage: the SQLite file and `public/uploads`. On a platform
-with an ephemeral filesystem, mount a volume for both, or move to Postgres plus object
-storage — `queries.ts`, `actions.ts`, `admin.ts` and `admin-actions.ts` are the only files
-that touch the database.
+Neon or any other Postgres works the same way: only the connection string changes.
+
+The schema is created with `CREATE TABLE IF NOT EXISTS` on boot. For later schema
+changes, add `ALTER TABLE … ADD COLUMN IF NOT EXISTS …` statements to `SCHEMA` in
+`src/lib/db.ts`, or adopt a migration tool once the schema starts changing often.
 
 ---
 
 ## Not built yet
 
-- **Outbound email** — inquiries are stored but nothing is emailed. Add a provider in
-  `saveInquiry`.
-- **Payments** — plans activate in demo mode without charging. See *Subscriptions* for where a payment provider plugs in.
+- **Payments** — plans activate in demo mode without charging. See *Subscriptions* for
+  exactly where Stripe plugs in.
+- **Outbound email** — nothing is emailed: no receipts, no password reset, no listing-expiry
+  reminders. Inquiries are stored and visible to admins only. Add a provider (e.g. Resend).
+- **Seller self-service** — sellers can list, renew and remove, but cannot upload photos
+  or edit a listing after publishing, and have no inbox for buyer inquiries. The admin
+  editor (`AdminListingForm`) has the photo handling to reuse.
+- **Account settings** — no change of password or email, and no account deletion.
+- **Legal pages** — terms of service, privacy policy and a refund/cancellation policy are
+  needed before taking payments.
 - **Image resizing** — uploads are stored as sent. Add `sharp` if you want thumbnails.

@@ -23,10 +23,10 @@ export default async function CheckoutPage({
   const user = await currentUser();
   if (!user) redirect(`/register?next=${encodeURIComponent(`/subscriptions/checkout?plan=${plan.id}`)}`);
 
-  const current = currentSubscription(user.id);
+  const current = await currentSubscription(user.id);
   if (current?.plan.id === plan.id) redirect('/account');
 
-  const live = activeListingCount(user.id);
+  const live = await activeListingCount(user.id);
   const overLimit = live > plan.listings;
 
   return (

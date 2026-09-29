@@ -24,13 +24,13 @@ const STEPS = [
 
 export default async function HomePage() {
   const [featured, recent] = await Promise.all([
-    withPhotosAll(getFeatured(6)),
-    withPhotosAll(getRecent(8)),
+    getFeatured(6).then(withPhotosAll),
+    getRecent(8).then(withPhotosAll),
   ]);
   const categories = await Promise.all(
-    countByBodyStyle().map(async (cat) => ({ ...cat, photo: await classPhoto(cat.value) })),
+    (await countByBodyStyle()).map(async (cat) => ({ ...cat, photo: await classPhoto(cat.value) })),
   );
-  const totals = stats();
+  const totals = await stats();
 
   return (
     <>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getListingsByIds } from '@/lib/queries';
+import type { ListingView } from '@/lib/types';
 import { withPhotosAll } from '@/lib/photos';
 import { money, miles } from '@/lib/format';
 import ClearCompare from '@/components/ClearCompare';
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   description: 'Compare used limousines and livery vehicles side by side on price, mileage, capacity and equipment.',
 };
 
-const ROWS: { label: string; get: (l: ReturnType<typeof getListingsByIds>[number]) => string }[] = [
+const ROWS: { label: string; get: (l: ListingView) => string }[] = [
   { label: 'Price', get: (l) => money(l.price) },
   { label: 'Year', get: (l) => String(l.year) },
   { label: 'Make', get: (l) => l.make },
@@ -43,7 +44,7 @@ export default async function ComparePage({
     .filter((n) => Number.isInteger(n) && n > 0)
     .slice(0, 4);
 
-  const listings = await withPhotosAll(getListingsByIds(ids));
+  const listings = await withPhotosAll(await getListingsByIds(ids));
 
   return (
     <div className="wrap py-10">
