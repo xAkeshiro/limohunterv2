@@ -41,6 +41,40 @@ async function main() {
   const created = await db.get<{ created_at: string }>('SELECT created_at FROM listings LIMIT 1');
   t('timestamps come back as ISO strings', typeof created?.created_at === 'string' && created.created_at.endsWith('Z'));
 
+  console.log('\nrow level security (blocks Supabase\'s public Data API)');
+  const unlocked = await db.all<{ relname: string }>(
+    `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT c.relrowsecurity`,
+  );
+  t('every app table has RLS enabled', unlocked.length === 0, `unlocked: ${unlocked.map((r) => r.relname).join(', ')}`);
+  // PGlite runs as a superuser, which skips RLS entirely, so prove the real
+  // rule with ordinary roles: the owner (the app) keeps access, others see nothing.
+  await db.exec(`
+    CREATE ROLE rls_app NOLOGIN; CREATE ROLE rls_public NOLOGIN;
+    CREATE SCHEMA rls_check AUTHORIZATION rls_app;
+    GRANT USAGE ON SCHEMA rls_check TO rls_public;
+  `);
+  const probe = await db.transaction(async (tx) => {
+    await tx.run('SET LOCAL ROLE rls_app');
+    await tx.exec(`
+      CREATE TABLE rls_check.users (email TEXT);
+      ALTER TABLE rls_check.users ENABLE ROW LEVEL SECURITY;
+      GRANT SELECT, INSERT ON rls_check.users TO rls_public;
+      INSERT INTO rls_check.users VALUES ('a@x.com'), ('b@x.com');
+    `);
+    const owner = (await tx.get<{ n: number }>('SELECT COUNT(*) AS n FROM rls_check.users'))!.n;
+    await tx.run('SET LOCAL ROLE rls_public');
+    const outsider = (await tx.get<{ n: number }>('SELECT COUNT(*) AS n FROM rls_check.users'))!.n;
+    let outsiderInsert = 'allowed';
+    await tx.run('SAVEPOINT s');
+    try { await tx.run("INSERT INTO rls_check.users VALUES ('evil@x.com')"); }
+    catch { outsiderInsert = 'refused'; await tx.run('ROLLBACK TO SAVEPOINT s'); }
+    return { owner, outsider, outsiderInsert };
+  });
+  t('table owner (the app) still reads every row', probe.owner === 2, `owner saw ${probe.owner}`);
+  t('another role with table grants sees no rows', probe.outsider === 0, `outsider saw ${probe.outsider}`);
+  t('another role cannot insert rows', probe.outsiderInsert === 'refused');
+
   console.log('\nplaceholders');
   t('? becomes $n', toPositional('a = ? AND b = ?', [1, 2]).text === 'a = $1 AND b = $2');
   t('? inside quotes is left alone', toPositional("x = '?' AND y = ?", [5]).text === "x = '?' AND y = $1");

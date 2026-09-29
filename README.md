@@ -272,6 +272,14 @@ Generate a secret with `node -e "console.log(require('crypto').randomBytes(32).t
 
 Neon or any other Postgres works the same way: only the connection string changes.
 
+**Row level security is on for every table, on purpose.** Supabase publishes the
+`public` schema through its Data API using a key that is public by design, so without RLS
+anyone could read `users` (emails and password hashes) straight from the API. With RLS on
+and no policies, that API gets nothing, while this app — which connects as the tables'
+owner — is unaffected. Don't add RLS policies or use the Supabase client-side SDK against
+these tables unless you mean to expose them; and if tables are ever created by another
+role, make the app's database role their owner.
+
 The schema is created with `CREATE TABLE IF NOT EXISTS` on boot. For later schema
 changes, add `ALTER TABLE … ADD COLUMN IF NOT EXISTS …` statements to `SCHEMA` in
 `src/lib/db.ts`, or adopt a migration tool once the schema starts changing often.

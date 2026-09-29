@@ -322,6 +322,18 @@ CREATE TABLE IF NOT EXISTS app_meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- Supabase publishes the public schema through its Data API, guarded only by a
+-- key that is public by design. Row level security with no policies denies
+-- that API every row. This app connects as the tables' owner, which RLS does
+-- not apply to, so it keeps full access. (If tables are ever created by a
+-- different role, make the app's role their owner or it will be locked out.)
+ALTER TABLE users         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE listings      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inquiries     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favorites     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_meta      ENABLE ROW LEVEL SECURITY;
 `;
 
 /* ------------------------------------------------------------- bootstrap */
